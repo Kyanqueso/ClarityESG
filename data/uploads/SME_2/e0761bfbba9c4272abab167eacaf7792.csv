@@ -1,0 +1,101 @@
+Business Name,Industry,ESG Aligned,ESG Focus
+SME_001,Agriculture,False,None
+SME_002,Retail,True,Fair Labor Practices
+SME_003,Agriculture,False,None
+SME_004,Education,False,None
+SME_005,IT Services,False,None
+SME_006,Retail,True,Water Conservation
+SME_007,Textiles,True,Renewable Energy
+SME_008,IT Services,True,Waste Management
+SME_009,Education,False,None
+SME_010,Manufacturing,False,None
+SME_011,IT Services,True,Ethical Sourcing
+SME_012,Food Services,True,Fair Labor Practices
+SME_013,IT Services,True,Ethical Sourcing
+SME_014,Construction,False,None
+SME_015,Textiles,False,None
+SME_016,Food Services,False,None
+SME_017,Healthcare,True,Ethical Sourcing
+SME_018,Education,False,None
+SME_019,IT Services,True,Water Conservation
+SME_020,Retail,True,Ethical Sourcing
+SME_021,Retail,False,None
+SME_022,Agriculture,False,None
+SME_023,Construction,False,None
+SME_024,Agriculture,False,None
+SME_025,Construction,False,None
+SME_026,Textiles,True,Community Development
+SME_027,Transport,False,None
+SME_028,Construction,True,Fair Labor Practices
+SME_029,Construction,True,Low Carbon Emissions
+SME_030,Education,False,None
+SME_031,Education,True,No ESG Initiatives
+SME_032,Retail,False,None
+SME_033,Retail,False,None
+SME_034,Construction,True,Renewable Energy
+SME_035,IT Services,False,None
+SME_036,Textiles,False,None
+SME_037,Agriculture,False,None
+SME_038,Manufacturing,True,Renewable Energy
+SME_039,Textiles,False,None
+SME_040,Education,True,No ESG Initiatives
+SME_041,IT Services,False,None
+SME_042,Healthcare,False,None
+SME_043,IT Services,True,Low Carbon Emissions
+SME_044,IT Services,True,Low Carbon Emissions
+SME_045,Healthcare,True,Renewable Energy
+SME_046,Education,True,Fair Labor Practices
+SME_047,IT Services,False,None
+SME_048,IT Services,False,None
+SME_049,IT Services,True,Fair Labor Practices
+SME_050,Food Services,True,No ESG Initiatives
+SME_051,Education,False,None
+SME_052,Food Services,False,None
+SME_053,Transport,False,None
+SME_054,Education,False,None
+SME_055,Healthcare,True,Water Conservation
+SME_056,Food Services,True,Renewable Energy
+SME_057,Construction,False,None
+SME_058,Transport,True,Water Conservation
+SME_059,Transport,False,None
+SME_060,Agriculture,True,Inclusive Hiring
+SME_061,Education,False,None
+SME_062,Retail,True,Water Conservation
+SME_063,Agriculture,False,None
+SME_064,Transport,False,None
+SME_065,Textiles,True,No ESG Initiatives
+SME_066,Transport,True,Inclusive Hiring
+SME_067,Food Services,False,None
+SME_068,Education,False,None
+SME_069,Education,False,None
+SME_070,Retail,False,None
+SME_071,Retail,True,Low Carbon Emissions
+SME_072,Retail,False,None
+SME_073,Healthcare,True,No ESG Initiatives
+SME_074,IT Services,True,Renewable Energy
+SME_075,Transport,False,None
+SME_076,Construction,True,Inclusive Hiring
+SME_077,Healthcare,False,None
+SME_078,Retail,True,Fair Labor Practices
+SME_079,Healthcare,False,None
+SME_080,Agriculture,True,Renewable Energy
+SME_081,Manufacturing,True,Water Conservation
+SME_082,Textiles,False,None
+SME_083,Construction,True,Low Carbon Emissions
+SME_084,Food Services,True,Renewable Energy
+SME_085,Manufacturing,False,None
+SME_086,Manufacturing,True,Waste Management
+SME_087,Education,False,None
+SME_088,Healthcare,False,None
+SME_089,Retail,False,None
+SME_090,Textiles,False,None
+SME_091,Retail,False,None
+SME_092,Transport,True,Waste Management
+SME_093,Textiles,True,Waste Management
+SME_094,Textiles,False,None
+SME_095,Retail,False,None
+SME_096,Manufacturing,False,None
+SME_097,IT Services,False,None
+SME_098,Manufacturing,False,None
+SME_099,Agriculture,True,Waste Management
+SME_100,Retail,True,Inclusive Hiring
