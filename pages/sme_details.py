@@ -1,18 +1,18 @@
 import time
 import streamlit as st
 import streamlit.components.v1 as components
+from urllib.parse import parse_qs, urlparse
+
 from data.database import get_id, add_supplier, update_supplier, delete_supplier, delete_sme, display_sme_data
 from utils.ai_utils import supply_chain_map
-from utils.scoring_utils import check_supplier, sector_risk_avg, region_risk, normalize
+from utils.scoring_utils import check_supplier, sector_risk_avg, region_risk, normalize, score_sme
 
+# Hide sidebar
 hide_sidebar_style = """
     <style>
-        /* Hide sidebar completely */
         [data-testid="stSidebar"] {
             display: none;
         }
-
-        /* Hide the top-right hamburger and fullscreen buttons */
         [data-testid="collapsedControl"] {
             display: none;
         }
@@ -25,9 +25,27 @@ back_to_analysis = st.button("Back to List of SMEs")
 if back_to_analysis:
     st.switch_page("pages/sme_analysis.py")
 
-sme_id = st.session_state.selected_sme_id
-risk_score_sme = st.session_state.selected_risk_score
-smes_df, suppliers_df = get_id(int(sme_id))
+# --- Get SME from query params OR session state ---
+query_params = st.query_params
+sme_id = query_params.get("sme_id")
+risk_score_sme = query_params.get("risk_score")
+
+# fallback to session state
+if not sme_id and "selected_sme_id" in st.session_state:
+    sme_id = st.session_state.selected_sme_id
+if not risk_score_sme and "selected_risk_score" in st.session_state:
+    risk_score_sme = st.session_state.selected_risk_score
+
+# Validate
+if not sme_id:
+    st.error("No SME selected. Please go back to the SME list.")
+    st.stop()
+
+sme_id = int(sme_id)
+risk_score_sme = float(risk_score_sme) if risk_score_sme else 0
+
+# --- Load SME data ---
+smes_df, suppliers_df = get_id(sme_id)
 
 if smes_df.empty:
     st.error("SME not found.")
@@ -35,29 +53,157 @@ else:
     sme_id = int(smes_df["sme_id"].iloc[0])
     business_name = smes_df["business_name"].iloc[0]
     created_at = smes_df["created_at"].iloc[0]
-    st.title(f"Detail of {str(business_name)}")
-    st.markdown(
-        f"""
-        <div style="
-            background-color: #333333;
-            border: 1px solid #ddd;
-            border-radius: 10px;
-            padding: 16px;
-            margin-bottom: 16px;
-            box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
-        ">
-            <h3 style="margin-top:0;">SME ID: {sme_id}</h3>
-            <p style="font-size: 18px; margin-bottom: 6px;"><b>Business Name:</b> {business_name}</p>
-            <p style="color: gray; font-size: 14px;">Date Created: {created_at}</p>
-        </div>
-        """,
-        unsafe_allow_html=True
+
+    # pull extra fields from display_sme_data
+    sme_df_data = display_sme_data(sme_id)
+    industry_sector = sme_df_data.loc[sme_df_data["Field"]
+                                      == "Industry Sector", "Value"].values[0]
+    region = sme_df_data.loc[sme_df_data["Field"]
+                             == "Region", "Value"].values[0]
+
+    # ✅ Calculate full ESG scores using score_sme()
+    final_score, f_score, e_score, s_score, g_score, explanation = score_sme(
+        sme_id, industry_sector, region
     )
 
-    st.markdown("### SME Table Info")
-    sme_df_data = display_sme_data(sme_id)
+    st.title(f"Detail of {str(business_name)}")
 
-    st.subheader("Basic Info")
+    # ✅ Card with ESG breakdown
+    def render_card(sme_id, business_name, industry_sector, region, risk_score, f_score, e_score, s_score, g_score, created_at):
+        bg_color = st.get_option("theme.backgroundColor")
+        st.markdown(
+            '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" crossorigin="anonymous">',
+            unsafe_allow_html=True
+        )
+        st.markdown(f"""
+            <style>
+              .loan-card {{
+                    border-radius: 10px;
+                    box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.2);
+                    padding: 20px;
+                    background: {bg_color}; 
+                    color: var(--text-color);
+                    margin-bottom: 20px;
+                    border: 1px solid rgba(255,255,255,0.1);
+                    transition: background 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease;
+                }}
+                .loan-card:hover {{
+                    box-shadow: 0px 8px 20px rgba(0,0,0,0.3);
+                    transform: translateY(-2px);
+                }}
+              .status-badge {{
+                background-color: #e7f3ff;
+                color: #084298;
+                font-size: 0.9rem;
+                border-radius: 20px;
+                padding: 4px 12px;
+                display: inline-flex;
+                align-items: center;
+                gap: 5px;
+              }}
+              .progress {{ 
+                  height: 6px;
+                  border-radius: 5px; 
+                  margin: 0;
+              }}
+              .esg-row {{
+                  margin-bottom: 4px !important;
+              }}
+              .esg-score .big {{ font-size: 2rem; font-weight: bold; }}
+              .esg-score .small {{ font-size: 1rem; }}
+              .esg-label {{ font-weight: bold; padding-right: 8px; }}
+              .esg-label.e {{ color: #198754; }}
+              .esg-label.s {{ color: #ffc107; }}
+              .esg-label.g {{ color: #0dcaf0; }}
+              .esg-label.f {{ color: orange; }}
+              .bg-orange {{ background-color: orange; }}
+            </style>
+        """, unsafe_allow_html=True)
+
+        st.html(f"""
+          <div class="loan-card">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-start">
+              <div>
+                <h5 class="mb-1">{business_name}</h5>
+                <small class="text-muted">SME ID: {sme_id} | Created: {created_at}</small>
+              </div>
+              <div>
+                <span class="status-badge">📊 ESG Analyzed</span>
+              </div>
+            </div>
+            <hr>
+
+            <!-- Main Content -->
+            <div class="row">
+              <!-- Industry Sector -->
+              <div class="col-md-6">
+                <h6 class="fw-bold">Industry & Location</h6>
+                <hr>
+                <div class="d-flex justify-content-between mb-1">
+                  <p class="mb-0">Industry:</p>
+                  <p class="mb-0 fw-bold text-end">{industry_sector}</p>
+                </div>
+                <div class="d-flex justify-content-between mb-1">
+                  <p class="mb-0">Region:</p>
+                  <p class="mb-0 text-success fw-bold">{region}</p>
+                </div>
+              </div>
+
+              <!-- ESG Assessment -->
+              <div class="col-md-6">
+                <h6 class="fw-bold">AI-Powered ESG Assessment</h6>
+                <hr>
+                <div class="d-flex align-items-start">
+                  <!-- Score -->
+                  <div class="esg-score me-4" style="padding-right:20px;">
+                    <div class="d-flex align-items-baseline">
+                        <span class="big text-primary">{risk_score:.2f}</span>
+                        <span class="small">/100</span>
+                    </div>
+                  </div>
+
+                  <!-- ESG Bars -->
+                  <div class="flex-grow-1">
+                    <div class="esg-row d-flex align-items-center">
+                      <small class="esg-label f">F</small>
+                      <div class="progress flex-grow-1">
+                        <div class="progress-bar bg-orange" style="width: {f_score:.2f}%"></div>
+                      </div>
+                    </div>
+                    <div class="esg-row d-flex align-items-center">
+                      <small class="esg-label e">E</small>
+                      <div class="progress flex-grow-1">
+                        <div class="progress-bar bg-success" style="width: {e_score:.2f}%"></div>
+                      </div>
+                    </div>
+                    <div class="esg-row d-flex align-items-center">
+                      <small class="esg-label s">S</small>
+                      <div class="progress flex-grow-1">
+                        <div class="progress-bar bg-warning" style="width: {s_score:.2f}%"></div>
+                      </div>
+                    </div>
+                    <div class="esg-row d-flex align-items-center">
+                      <small class="esg-label g">G</small>
+                      <div class="progress flex-grow-1">
+                        <div class="progress-bar bg-info" style="width: {g_score:.2f}%"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        """)
+
+    # ✅ Render the SME card with full ESG breakdown
+    render_card(
+        sme_id, business_name, industry_sector, region,
+        final_score, f_score, e_score, s_score, g_score, created_at
+    )
+
+    # ---- Rest of SME detail sections ----
+    st.markdown("### SME Table Info")
     st.table(sme_df_data[sme_df_data["Field"].isin([
         "SME ID", "Business Name", "Business Permit File", "Industry Sector",
         "Region", "Number of Employees", "Average Annual Revenue",
@@ -93,226 +239,27 @@ else:
     ])])
     st.html("<br>")
 
-    st.markdown("### Suppliers")
-    if suppliers_df.empty:
-        st.info("No suppliers yet for this SME.")
-        with st.form("supplier_forms"):
-            new_supplier_name = st.text_input("Add new supplier")
-            new_supplier_sector = st.selectbox(
-                "Industry Sector of Supplier",
-                [
-                    "Agriculture",
-                    "Banking and Finance",
-                    "Business and Services",
-                    "Construction and Real Estate",
-                    "Energy",
-                    "Fisheries and Aquaculture",
-                    "Forestry and Logging",
-                    "Manufacturing",
-                    "Mining and Quarrying",
-                    "Transport and Logistics"
-                ]
-            )
-            new_supplier_region = st.selectbox(
-                "Region location of business",
-                [
-                    "",
-                    "National Capital Region (NCR)",
-                    "Ilocos Region (Region I)",
-                    "Cagayan Valley (Region II)",
-                    "Cordillera Administrative Region (CAR)",
-                    "Central Luzon (Region III)",
-                    "CALABARZON (Region IV-A)",
-                    "MIMAROPA Region (Region IV-B)",
-                    "Bicol Region (Region V)",
-                    "Western Visayas (Region VI)",
-                    "Central Visayas (Region VII)",
-                    "Eastern Visayas (Region VIII)",
-                    "Zamboanga Peninsula (Region IX)",
-                    "Northern Mindanao (Region X)",
-                    "Davao Region (Region XI)",
-                    "SOCCSKSARGEN (Region XII)",
-                    "Caraga (Region XIII)",
-                    "Bangsamoro Autonomous Region in Muslim Mindanao (BARMM)"
-                ]
-            )
-            new_supplier_bp = st.file_uploader("Upload supplier's business permit", type="PDF", accept_multiple_files=False)
-            has_bp = bool(new_supplier_bp)
+    # ---------------- SUPPLY CHAIN MAP ----------------
+    st.html("<br>")
+    st.subheader("Supply Chain Map of this SME")
+    html_path = supply_chain_map(sme_id, final_score)
+    with open(html_path, 'r', encoding="utf-8") as f:
+        html_content = f.read()
+    components.html(html_content, height=512, scrolling=True)
 
-            risk_notes = st.text_area("Enter known risks of this supplier if any", placeholder="e.g. has a known record of illegal logging")
-            
-            submit_btn_supplier1 = st.form_submit_button("Add Supplier")
-
-            if submit_btn_supplier1:
-                has_bp = True if has_bp is not None else False
-                add_supplier(sme_id, new_supplier_name, new_supplier_sector, new_supplier_region, has_bp)
-                st.success(f"Supplier '{new_supplier_name}' added.")
-                st.rerun()
-    else:
-        if not suppliers_df.empty:
-            with st.form("supplier_forms"):
-                st.subheader("Add new supplier form")
-                st.html("<hr>")
-                new_supplier_name = st.text_input("Add new supplier")
-                new_supplier_sector = st.selectbox(
-                    "Industry Sector of Supplier",
-                    [
-                        "Agriculture",
-                        "Banking and Finance",
-                        "Business and Services",
-                        "Construction and Real Estate",
-                        "Energy",
-                        "Fisheries and Aquaculture",
-                        "Forestry and Logging",
-                        "Manufacturing",
-                        "Mining and Quarrying",
-                        "Transport and Logistics"
-                    ]
-                )
-                new_supplier_region = st.selectbox(
-                    "Region location of business",
-                    [
-                        "",
-                        "National Capital Region (NCR)",
-                        "Ilocos Region (Region I)",
-                        "Cagayan Valley (Region II)",
-                        "Cordillera Administrative Region (CAR)",
-                        "Central Luzon (Region III)",
-                        "CALABARZON (Region IV-A)",
-                        "MIMAROPA Region (Region IV-B)",
-                        "Bicol Region (Region V)",
-                        "Western Visayas (Region VI)",
-                        "Central Visayas (Region VII)",
-                        "Eastern Visayas (Region VIII)",
-                        "Zamboanga Peninsula (Region IX)",
-                        "Northern Mindanao (Region X)",
-                        "Davao Region (Region XI)",
-                        "SOCCSKSARGEN (Region XII)",
-                        "Caraga (Region XIII)",
-                        "Bangsamoro Autonomous Region in Muslim Mindanao (BARMM)"
-                    ]
-                )
-                new_supplier_bp = st.file_uploader("Upload supplier's business permit", type="PDF", accept_multiple_files=False)
-                risk_notes = st.text_area("Enter known risks of this supplier if any", placeholder="e.g. has a known record of illegal logging")
-
-                submit_btn_supplier2 = st.form_submit_button("Add Supplier")
-
-                if submit_btn_supplier2:
-                    has_bp = True if new_supplier_bp is not None else False
-                    add_supplier(sme_id, new_supplier_name, new_supplier_sector, new_supplier_region, has_bp)
-                    st.success(f"Supplier '{new_supplier_name}' added.")
-                    st.rerun()
-
-        if 'edit_supplier_id' not in st.session_state:
-            st.session_state.edit_supplier_id = None
-
-        st.html("<br>")
-        st.html("<hr>")
-        for _, row in suppliers_df.iterrows():
-            supplier_id = int(row['supplier_id'])
-            supplier_name = row['supplier_name']
-            supplier_sector = row['supplier_sector']
-            supplier_region = row['supplier_region']
-            supplier_permit = row['supplier_permit']
-            id_of_sme = row['sme_id']
-
-            name_score = float(check_supplier(str(supplier_name)))
-
-            sector_df = sector_risk_avg(str(supplier_sector))
-            sector_score = normalize(float(sector_df["avg_score"].iloc[0]), 0, 10)
-
-            region_df = region_risk(str(supplier_region))
-            region_score = abs(float(region_df["score"].iloc[0]) - 100)
-
-            permit_score = 0 if int(supplier_permit) == 1 else 50
-
-            #lower the better
-            final_score = (name_score + sector_score + region_score + permit_score) / 4
-
-            cols = st.columns([3, 1, 1])
-            cols[0].write(f"**{supplier_name}** — Risk Score: {final_score:.2f}%")
-            cols[0].write(f"**{supplier_sector}**")
-            cols[0].write(f"**{supplier_region}**")
-
-            # Edit button + set session state
-            if cols[1].button("✏️ Edit", key=f"edit_{supplier_id}"):
-                st.session_state.edit_supplier_id = supplier_id
-
-            # If this supplier is being edited, show input + save button
-            if st.session_state.edit_supplier_id == supplier_id:
-                edit_supplier_name = st.text_input("Supplier Name", supplier_name, key=f"name_{supplier_id}")
-
-                edit_supplier_sector = st.selectbox(
-                    "Industry Sector of Supplier",
-                    [
-                        "Agriculture",
-                        "Banking and Finance",
-                        "Business and Services",
-                        "Construction and Real Estate",
-                        "Energy",
-                        "Fisheries and Aquaculture",
-                        "Forestry and Logging",
-                        "Manufacturing",
-                        "Mining and Quarrying",
-                        "Transport and Logistics"
-                    ], key=f"sector_{supplier_id}"
-                )
-
-                edit_supplier_region = st.selectbox(
-                    "Region location of business",
-                    [
-                        "",
-                        "National Capital Region (NCR)",
-                        "Ilocos Region (Region I)",
-                        "Cagayan Valley (Region II)",
-                        "Cordillera Administrative Region (CAR)",
-                        "Central Luzon (Region III)",
-                        "CALABARZON (Region IV-A)",
-                        "MIMAROPA Region (Region IV-B)",
-                        "Bicol Region (Region V)",
-                        "Western Visayas (Region VI)",
-                        "Central Visayas (Region VII)",
-                        "Eastern Visayas (Region VIII)",
-                        "Zamboanga Peninsula (Region IX)",
-                        "Northern Mindanao (Region X)",
-                        "Davao Region (Region XI)",
-                        "SOCCSKSARGEN (Region XII)",
-                        "Caraga (Region XIII)",
-                        "Bangsamoro Autonomous Region in Muslim Mindanao (BARMM)"
-                    ], key=f"region_{supplier_id}"
-                )
-                save_key = f"save_{supplier_id}"
-                if cols[1].button("Save Changes", key=save_key):
-                    update_supplier(supplier_id, edit_supplier_name, edit_supplier_sector, edit_supplier_region, id_of_sme)
-                    st.session_state.edit_supplier_id = None
-                    st.rerun()
-
-            # Delete button
-            if cols[2].button("🗑️ Delete", key=f"del_{supplier_id}"):
-                delete_supplier(supplier_id)
-                st.rerun()
-            st.html("<hr>")
-
-st.html("<br>")
-st.subheader("Supply Chain Map of this SME")
-html_path = supply_chain_map(sme_id, risk_score_sme)
-with open(html_path, 'r', encoding="utf-8") as f:
-    html_content = f.read()
-
-components.html(html_content, height=512, scrolling=True)
-
-if "confirm_delete" not in st.session_state:
-    st.session_state.confirm_delete = False
-
-if st.button("Delete this SME"):
-    st.session_state.confirm_delete = True
-
-if st.session_state.confirm_delete:
-    st.warning("Are you sure you want to delete this SME?")
-    if st.button("Yes, delete permanently"):
-        delete_sme(sme_id)
-        st.success("SME deleted successfully. Switching to Home page...")
-        time.sleep(2)
-        st.switch_page("Home.py")
-    if st.button("Cancel"):
+    # ---------------- DELETE SME ----------------
+    if "confirm_delete" not in st.session_state:
         st.session_state.confirm_delete = False
+
+    if st.button("Delete this SME"):
+        st.session_state.confirm_delete = True
+
+    if st.session_state.confirm_delete:
+        st.warning("Are you sure you want to delete this SME?")
+        if st.button("Yes, delete permanently"):
+            delete_sme(sme_id)
+            st.success("SME deleted successfully. Switching to Home page...")
+            time.sleep(2)
+            st.switch_page("Home.py")
+        if st.button("Cancel"):
+            st.session_state.confirm_delete = False
