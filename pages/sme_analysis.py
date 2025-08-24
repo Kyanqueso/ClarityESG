@@ -20,7 +20,7 @@ st.set_page_config(page_title="List of registered SMEs", layout="wide")
 
 back_to_home = st.button("Back to Home")
 if back_to_home:
-    st.switch_page("Home.py")
+    st.switch_page("app.py")
 
 st.title("SME analysis and supply chain mapping")
 

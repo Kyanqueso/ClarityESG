@@ -28,7 +28,7 @@ if "sme_data" not in st.session_state:
 
 back_to_home = st.button("Back to Home")
 if back_to_home:
-    st.switch_page("Home.py")
+    st.switch_page("app.py")
     
 st.title("ESG Input form")
 

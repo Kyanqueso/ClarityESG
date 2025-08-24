@@ -33,7 +33,7 @@ st.markdown(hide_sidebar_style, unsafe_allow_html=True)
 st.set_page_config(page_title="Statistics Page", layout="wide")
 
 if st.button("Back to Home"):
-    st.switch_page("Home.py")
+    st.switch_page("app.py")
 
 st.header("Statistics of Sectors and Regions of the Philippines")
 st.text("Last Updated: August 25, 2025")
