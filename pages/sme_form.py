@@ -75,9 +75,23 @@ if st.session_state.sme_step == 1:
                 "Bangsamoro Autonomous Region in Muslim Mindanao (BARMM)"
             ]
         )
-        num_employees = st.number_input("Enter number of employees here (Required)", value=0)
-        years_in_operation = st.number_input("Enter years of operation here (Required)", value=0)
-        avg_annual_revenue = st.number_input("Enter estimated annual revenue (Required)")
+        num_employees = st.number_input(
+            "Enter number of employees here (Required)", 
+            min_value=0, 
+            value=0
+        )
+
+        years_in_operation = st.number_input(
+            "Enter years of operation here (Required)", 
+            min_value=0, 
+            value=0
+        )
+
+        avg_annual_revenue = st.number_input(
+            "Enter estimated annual revenue (Required)", 
+            min_value=0.0, 
+            value=0.0
+        )
 
         submit_btn1 = st.form_submit_button("Next")
 
@@ -187,6 +201,7 @@ elif st.session_state.sme_step == 2:
                     Please extract the kwh and display this only:
 
                     (kwh from extracted text) where kwh is all small letters
+                    if you cannot properly find one, simply display 0 only!!
                     """
                     energy_usage = generate_summary(prompt)
 
@@ -217,7 +232,7 @@ elif st.session_state.sme_step == 2:
                         (m3 or liters from extracted water bill) where m3 or liters is all small letters
                         e.g. 17 m3, 90 l, etc.
 
-                        if no m3 or liters simply display "0"
+                        if no m3 or liters simply display "0" only!!
                     """
                     water_usage = generate_summary(prompt)
 
@@ -237,9 +252,20 @@ elif st.session_state.sme_step == 2:
 
 elif st.session_state.sme_step == 3:
     with st.form("form3"):
-        pct_emp_health = st.number_input("Enter percentage of employees with health insurance")
-        pct_emp_sss = st.number_input("Enter percentage of employees with social security")
-        emp_turnover_rate = st.number_input("Enter percentage of employees turned over")
+        pct_emp_health = st.number_input(
+            "Enter percentage of employees with health insurance",
+            min_value=0.0, max_value=100.0
+        )
+
+        pct_emp_sss = st.number_input(
+            "Enter percentage of employees with social security",
+            min_value=0.0, max_value=100.0
+        )
+
+        emp_turnover_rate = st.number_input(
+            "Enter percentage of employees turned over",
+            min_value=0.0, max_value=100.0
+        )
         payroll = st.file_uploader("Upload payroll of business here (Required)", type=["PDF","JPG","PNG","CSV"], accept_multiple_files=False)
         csr_spending = st.number_input("Enter amount spent on csr projects")
 
@@ -345,7 +371,8 @@ elif st.session_state.sme_step == 4:
         bir_income_tax = st.file_uploader("Upload Latest BIR Income tax here (Required)", type="PDF", accept_multiple_files=False)
         documented_policies = st.file_uploader("Upload business policy here", type=["PDF","JPG","PNG"], accept_multiple_files=False)
         has_documented_policies = bool(documented_policies)
-        inspection_result = st.number_input("Enter BPI inspection result score")
+        inspection_result = st.number_input("Enter BPI inspection result score",
+            min_value=0.0, max_value=100.0)
 
         submit_btn4 = st.form_submit_button("Submit")
         if submit_btn4:
