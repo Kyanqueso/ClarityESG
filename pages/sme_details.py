@@ -113,12 +113,12 @@ else:
                     "Banking and Finance",
                     "Business and Services",
                     "Construction and Real Estate",
-                    "Energy",
+                    "Energy Sector",
                     "Fisheries and Aquaculture",
                     "Forestry and Logging",
                     "Manufacturing",
                     "Mining and Quarrying",
-                    "Transport and Logistics"
+                    "Logistics and Transportation"
                 ]
             )
             new_supplier_region = st.selectbox(
@@ -177,12 +177,12 @@ else:
                         "Banking and Finance",
                         "Business and Services",
                         "Construction and Real Estate",
-                        "Energy",
+                        "Energy Sector",
                         "Fisheries and Aquaculture",
                         "Forestry and Logging",
                         "Manufacturing",
                         "Mining and Quarrying",
-                        "Transport and Logistics"
+                        "Logistics and Transportation"
                     ]
                 )
                 new_supplier_region = st.selectbox(
@@ -273,12 +273,12 @@ else:
                         "Banking and Finance",
                         "Business and Services",
                         "Construction and Real Estate",
-                        "Energy",
+                        "Energy Sector",
                         "Fisheries and Aquaculture",
                         "Forestry and Logging",
                         "Manufacturing",
                         "Mining and Quarrying",
-                        "Transport and Logistics"
+                        "Logistics and Transportation"
                     ], key=f"sector_{supplier_id}"
                 )
 

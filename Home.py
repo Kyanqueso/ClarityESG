@@ -1,8 +1,6 @@
 import streamlit as st
 from data.database import init_db, init_supplier, init_esg_sector_risks, init_supplier_watchlist, init_region_risk, init_audit_log, insert_esg_scores, insert_to_suppliers_watchlist, insert_to_suppliers_watchlist2, insert_to_region_risks
-import sqlite3
-import pandas as pd
-import json
+
 # initialize the sqlite database
 init_db()
 init_supplier()
@@ -54,11 +52,3 @@ if analyze_sme_tab:
 
 if statistics_tab:
     st.switch_page("pages/statistics.py")
-
-def see_stuff(sme_id):
-    conn = sqlite3.connect("esg_scoring.db")
-    df = pd.read_sql("SELECT * FROM audit_log WHERE sme_id = ?", conn, params=(sme_id,))
-    df['final_score'] = df['explanation_json'].apply(lambda x: json.loads(x)['final_score'])
-    return df
-
-st.table(see_stuff(7))
