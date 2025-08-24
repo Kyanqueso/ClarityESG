@@ -2,6 +2,7 @@ import sqlite3
 import os
 import uuid
 import pandas as pd
+import json
 from utils.ai_utils import philgeps_blacklist, sec_suspended
 
 # Initializations 
@@ -376,6 +377,12 @@ def get_id(sme_id):
 
     return df1,df2
 
+def get_audit_score(sme_id):
+    conn = sqlite3.connect("esg_scoring.db")
+    df = pd.read_sql("SELECT * FROM audit_log WHERE sme_id = ?", conn, params=(sme_id,))
+    df['final_score'] = df['explanation_json'].apply(lambda x: json.loads(x)['final_score'])
+    return df
+
 def display_sme_data(sme_id):
     conn = sqlite3.connect("esg_scoring.db")
     df = pd.read_sql("SELECT * FROM sme where sme_id = ?", conn, params=(sme_id,))
@@ -427,3 +434,12 @@ def display_sme_data(sme_id):
     df_transformed.columns = ["Field", "Value"]
     df_transformed["Field"] = df_transformed["Field"].replace(FIELD_LABELS)
     return df_transformed
+
+# delete sme
+def delete_sme(sme_id):
+    conn = sqlite3.connect("esg_scoring.db")
+    c = conn.cursor()
+    c.execute("DELETE FROM supplier WHERE sme_id = ?", (sme_id,))
+    c.execute("DELETE FROM sme WHERE sme_id = ?", (sme_id,))
+    conn.commit()
+    conn.close()

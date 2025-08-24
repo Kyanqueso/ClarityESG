@@ -5,12 +5,15 @@ import re
 import sqlite3
 import textwrap
 import tempfile
+
 from datetime import datetime
+from data.database import get_audit_score
 from openai import OpenAI
 from dotenv import load_dotenv
 from pathlib import Path
 
 import streamlit as st
+import seaborn as sns
 import pandas as pd
 import networkx as nx
 import matplotlib.pyplot as plt
@@ -64,12 +67,15 @@ def save_scores_chart(explanation) -> str:
     ]
 
     colors = ["#fd7e14", "#5cb85c", "#f0ad4e", "#5bc0de","#6f42c1"]
-    plt.figure(figsize=(6, 4))
+    plt.figure(figsize=(6, 4), facecolor="black")
     plt.bar(comps, vals, color=colors)
     plt.grid(axis="y", linestyle="--", alpha=0.7)
-    plt.title("ESG Component Scores")
+    plt.title("ESG Component Scores", color="white")
     plt.ylim(0, 100)
-    plt.ylabel("Score")
+    plt.ylabel("Score", color='white')
+    plt.xticks(color='white')
+    plt.yticks(color='white')
+
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
     plt.tight_layout()
     plt.savefig(tmp.name, dpi=180, bbox_inches="tight")
@@ -78,10 +84,8 @@ def save_scores_chart(explanation) -> str:
 
 # Build small graph: SME -> suppliers, with edge weight mapped to supplier score
 def save_supply_chain_graph(sme_info, explanation) -> str:
-    
     G = nx.DiGraph()
     sme_label = sme_info.get("business_name", f"SME {sme_info.get('sme_id','')}")
-
     G.add_node(sme_label)
 
     suppliers = explanation.get("suppliers_detail", [])
@@ -90,23 +94,28 @@ def save_supply_chain_graph(sme_info, explanation) -> str:
         G.add_node(sup_name)
         # weight = supplier final score (higher = better)
         G.add_edge(sme_label, sup_name, weight=s.get("final_supplier_score", 0.0))
-
+    
     # layout & draw
     pos = nx.spring_layout(G, seed=42)
-    plt.figure(figsize=(6, 4))
-    nx.draw_networkx_nodes(G, pos, node_size=1000)
-    nx.draw_networkx_labels(G, pos, font_size=8)
-    nx.draw_networkx_edges(G, pos, arrows=True)
-
+    plt.figure(figsize=(6, 4), facecolor="white")  # Light figure background
+    ax = plt.gca()
+    ax.set_facecolor("white")  # Light axes background
+    
+    # Draw nodes, edges, labels
+    nx.draw_networkx_nodes(G, pos, node_size=1000, node_color="#f0f0f0", edgecolors="#555")
+    nx.draw_networkx_labels(G, pos, font_size=8, font_color="#222")
+    nx.draw_networkx_edges(G, pos, arrows=True, edge_color="#555")
+    
     # annotate edges with weights
     edge_labels = {(u, v): f"{d.get('weight',0):.1f}" for u, v, d in G.edges(data=True)}
-    nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, font_size=7)
+    nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, font_size=7, font_color="#333")
 
-    plt.title("Supply Chain Map (edge label = supplier score)")
+    plt.title("Supply Chain Map (edge label = supplier score)", color="#222")
     plt.axis("off")
+
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
     plt.tight_layout()
-    plt.savefig(tmp.name, dpi=180, bbox_inches="tight")
+    plt.savefig(tmp.name, dpi=180, bbox_inches="tight", facecolor="white")
     plt.close()
     return tmp.name
 
@@ -159,6 +168,33 @@ def draft_risk_analysis(explanation, sme_info):
     )
     return resp.choices[0].message.content.strip()
 
+def save_score_history_chart(sme_id, db_path=DB_PATH) -> str:
+    # Fetch last 10 audit scores
+    audit_df = get_audit_score(sme_id)
+    audit_df = audit_df.sort_values(by="created_at", ascending=True).iloc[0:10]
+    
+    plt.figure(figsize=(8, 4))
+    
+    sns.set_theme(style="darkgrid", rc={"axes.facecolor": "#111", "figure.facecolor": "#111"})
+    sns.lineplot(
+        x="created_at",
+        y="final_score",
+        data=audit_df,
+        color="#b37125",
+        marker="o"
+    )
+
+    plt.xlabel("DATE SCORED", color="white")
+    plt.ylabel("SCORE", color="white")
+    plt.xticks(rotation=70, color='white')
+    plt.yticks(color='white')
+    plt.tight_layout()
+
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+    plt.savefig(tmp.name, dpi=180, bbox_inches="tight")
+    plt.close()
+    return tmp.name
+
 def build_pdf(sme_info, explanation, scored_at, scores_chart_path, sc_graph_path) -> bytes:
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=1.5*cm, leftMargin=1.5*cm, topMargin=1.2*cm, bottomMargin=1.2*cm)
@@ -201,7 +237,7 @@ def build_pdf(sme_info, explanation, scored_at, scores_chart_path, sc_graph_path
     story.append(Spacer(1, 6))
     story.append(Image(scores_chart_path, width=15*cm, height=9*cm))
     story.append(Spacer(1, 12))
-
+    
     # Supply Chain Map
     story.append(Paragraph("Supply Chain Map", styles["H2"]))
     story.append(Image(sc_graph_path, width=15*cm, height=9*cm))
@@ -230,6 +266,12 @@ def build_pdf(sme_info, explanation, scored_at, scores_chart_path, sc_graph_path
         ]))
         story.append(stbl)
         story.append(PageBreak())
+
+    # Score History
+    score_history_path = save_score_history_chart(sme_info["sme_id"])
+    story.append(Paragraph("Score History (Last 10 audits)", styles["H2"]))
+    story.append(Image(score_history_path, width=15*cm, height=8*cm))
+    story.append(Spacer(1, 12))
 
     # Risk Analysis (GPT)
     story.append(Paragraph("Risk Analysis", styles["H2"]))

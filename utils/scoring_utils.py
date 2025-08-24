@@ -209,7 +209,7 @@ def score_sme(sme_id, industry_sector, region, db_path="esg_scoring.db"):
             "final_supplier_score": final_supplier_score
         })
 
-    average_supplier_score = np.mean(supplier_scores) if supplier_scores else 100
+    average_supplier_score = np.mean(supplier_scores) if supplier_scores else 50
 
     # Calculate grand total score
     base_score = (0.15 * financial_score + 0.30 * env_score_bonus + 0.30 * soc_score + 0.25 * gov_score_bonus)

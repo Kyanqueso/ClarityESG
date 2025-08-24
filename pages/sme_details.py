@@ -1,7 +1,9 @@
 import time
 import streamlit as st
 import streamlit.components.v1 as components
-from data.database import get_id, add_supplier, update_supplier, delete_supplier, delete_sme, display_sme_data
+import seaborn as sns
+import matplotlib.pyplot as plt
+from data.database import get_id, get_audit_score, add_supplier, update_supplier, delete_supplier, delete_sme, display_sme_data
 from utils.ai_utils import supply_chain_map
 from utils.scoring_utils import check_supplier, sector_risk_avg, region_risk, normalize, score_sme
 from utils.report_utils import load_latest_explanation, load_sme_record, build_pdf, save_scores_chart, save_supply_chain_graph
@@ -150,10 +152,13 @@ else:
             submit_btn_supplier1 = st.form_submit_button("Add Supplier")
 
             if submit_btn_supplier1:
-                has_bp = True if has_bp is not None else False
-                add_supplier(sme_id, new_supplier_name, new_supplier_sector, new_supplier_region, has_bp)
-                st.success(f"Supplier '{new_supplier_name}' added.")
-                st.rerun()
+                if not all([new_supplier_name, new_supplier_region, new_supplier_region]):
+                        st.warning("Please fill out name, sector and region of supplier")
+                else:
+                    has_bp = True if has_bp is not None else False
+                    add_supplier(sme_id, new_supplier_name, new_supplier_sector, new_supplier_region, has_bp)
+                    st.success(f"Supplier '{new_supplier_name}' added.")
+                    st.rerun()
     else:
         if not suppliers_df.empty:
             with st.form("supplier_forms"):
@@ -209,10 +214,13 @@ else:
                 submit_btn_supplier2 = st.form_submit_button("Add Supplier")
 
                 if submit_btn_supplier2:
-                    has_bp = True if new_supplier_bp is not None else False
-                    add_supplier(sme_id, new_supplier_name, new_supplier_sector, new_supplier_region, has_bp)
-                    st.success(f"Supplier '{new_supplier_name}' added.")
-                    st.rerun()
+                    if not all([new_supplier_name, new_supplier_region, new_supplier_region]):
+                        st.warning("Please fill out name, sector and region of supplier")
+                    else:
+                        has_bp = True if new_supplier_bp is not None else False
+                        add_supplier(sme_id, new_supplier_name, new_supplier_sector, new_supplier_region, has_bp)
+                        st.success(f"Supplier '{new_supplier_name}' added.")
+                        st.rerun()
 
         if 'edit_supplier_id' not in st.session_state:
             st.session_state.edit_supplier_id = None
@@ -321,6 +329,25 @@ with open(html_path, 'r', encoding="utf-8") as f:
     html_content = f.read()
 
 components.html(html_content, height=512, scrolling=True)
+
+# Time Series audit score graph
+audit_df = get_audit_score(sme_id)
+audit_df = audit_df.sort_values(by="created_at", ascending=True).iloc[0:10]
+
+plt.figure(figsize=(8, 4))
+
+st.subheader("Score History (Most Recent 10)")
+sns.set_theme(style="darkgrid", rc={"axes.facecolor": "#111", "figure.facecolor": "#111"})
+sns.lineplot(x="created_at", y="final_score", data=audit_df, color="#b37125", marker="o")
+
+plt.xlabel("DATE SCORED", color="white")
+plt.ylabel("SCORE", color='white')
+plt.xticks(rotation=70, color='white')
+plt.yticks(color='white')
+
+st.pyplot(plt)
+st.html("<br>")
+plt.clf()
 
 donwload_report = st.button("Download Report")
 
