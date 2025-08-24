@@ -44,7 +44,7 @@ if st.session_state.sme_step == 1:
                 "Banking and Finance",
                 "Business and Services",
                 "Construction and Real Estate",
-                "Energy",
+                "Energy Sector",
                 "Fisheries and Aquaculture",
                 "Forestry and Logging",
                 "Manufacturing",
@@ -376,4 +376,4 @@ elif st.session_state.sme_step == 4:
             
             st.success("Submission successful, switching you back to Home...")
             time.sleep(3)
-            st.switch_page("Home.py")
+            st.switch_page("app.py")
