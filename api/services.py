@@ -1,63 +1,15 @@
+# === INTEGRATION POINTS ===
+# Replace these with imports of your real logic, e.g.:
+# from scoring_utils import compute_esg_score
+# from audit_utils import fetch_audit_events
+
 import sqlite3
-import difflib
 import json
 import numpy as np
 import pandas as pd
 from data.database import get_id
+from utils.scoring_utils import check_supplier, normalize, sector_risk_avg, region_risk
 
-# Supplier risk tracker
-def clean_sme_name(name):
-    replace_words = ["INCORPORATED", "CORPORATION", "RESPONDENT", "INC", "COMPANY", ".", ","]
-    name = name.upper()
-    for r in replace_words:
-        name = name.replace(r, "")
-    return " ".join(name.split())
-
-def check_supplier(supplier_name: str, threshold: float = 0.8):
-    conn = sqlite3.connect("esg_scoring.db")
-    c = conn.cursor()
-    c.execute("SELECT business_name, risk_tag FROM supplier_watchlist")
-    watchlist = c.fetchall()
-    conn.close()
-    
-    results = []
-    s_clean = clean_sme_name(supplier_name)
-
-    for business_name, risk_tag in watchlist:
-        v_clean = clean_sme_name(business_name)
-        score = difflib.SequenceMatcher(None, s_clean, v_clean).ratio()
-
-        if score >= threshold:
-            results.append({
-                "business_name": business_name,
-                "risk_tag": risk_tag,
-                "score": score
-            })
-    
-    # return highest score if any match, otherwise 0
-    if results:
-        return max(r["score"] for r in results)
-    return 0.0
-
-# Auto normalize
-def normalize(value, min_val, max_val):
-    if value is None:
-        return 0
-    return max(0, min (100, (value - min_val) / (max_val - min_val) * 100))
-
-# get sector risk
-def sector_risk_avg(sector_name):
-    conn = sqlite3.connect("esg_scoring.db") 
-    df = pd.read_sql("SELECT * FROM esg_sector_risks WHERE sector = ?", conn, params=(sector_name,))
-    df["avg_score"] = (df["env_risk"] + df["soc_risk"] + df["gov_risk"])/3
-    return df[["sector","avg_score"]]
-
-def region_risk(region_name):
-    conn = sqlite3.connect("esg_scoring.db")
-    df = pd.read_sql("SELECT * FROM region_risks WHERE region = ?", conn, params=(region_name,))
-    return df
-
-# Scoring method or formula for SMEs
 def score_sme(sme_id, industry_sector, region, db_path="esg_scoring.db"):
     conn = sqlite3.connect(db_path)
 
@@ -250,3 +202,9 @@ def score_sme(sme_id, industry_sector, region, db_path="esg_scoring.db"):
     conn.close()
 
     return final_score, financial_score, env_score, soc_score, gov_score, explanation
+
+# Will remove after everything is finished
+def see_stuff():
+    conn = sqlite3.connect("esg_scoring.db")
+    df = pd.read_sql("SELECT * FROM audit_log", conn)
+    return df

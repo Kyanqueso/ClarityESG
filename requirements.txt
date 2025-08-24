@@ -1,0 +1,13 @@
+beautifulsoup4
+matplotlib
+numpy
+openai
+pandas
+Pillow
+pymupdf
+pyvis
+python-dotenv
+reportlab
+requests
+seaborn
+streamlit

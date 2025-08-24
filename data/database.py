@@ -105,6 +105,18 @@ def init_supplier_watchlist():
     """)
     conn.commit()
     conn.close()
+
+def init_audit_log():
+    conn = sqlite3.connect("esg_scoring.db")
+    c = conn.cursor()
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS audit_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sme_id INTEGER,
+            explanation_json TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
 #========================================================================
 # INSERT
 # Must be only used once
@@ -290,11 +302,11 @@ def temp_insert_sme(sme_data):
 
     c.execute("""
         INSERT INTO sme (
-            business_name, industry_sector, region, num_employees, avg_annual_revenue, years_in_operation, sector_stability,
-            market_competition, location_hazard, has_bcp, energy_usage, water_usage, waste_management,
-            denr_permits, ghg_emissions, pct_emp_health, pct_emp_sss, emp_turnover_rate, csr_spending, fin_reporting_freq, 
-            has_policies, inspection_score
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            business_name, industry_sector, region, num_employees, avg_annual_revenue, years_in_operation, is_profitable, 
+            sector_stability, market_competition, location_hazard, has_bcp, energy_usage, water_usage, waste_management,
+            denr_permits, ghg_emissions, pct_emp_health, pct_emp_sss, emp_turnover_rate, csr_spending, workplace_safety,
+            emergency_preparedness, fin_reporting_freq, has_policies, inspection_score
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         sme_data["business_name"],
         sme_data["industry_sector"],
@@ -302,6 +314,7 @@ def temp_insert_sme(sme_data):
         sme_data["num_employees"],
         sme_data["avg_annual_revenue"],       
         sme_data["years_in_operation"],
+        sme_data["is_profitable"],
         sme_data["sector_stability"],              
         sme_data["market_competition"],
         sme_data["location_hazard"],
@@ -315,6 +328,8 @@ def temp_insert_sme(sme_data):
         sme_data["pct_emp_sss"],       
         sme_data["emp_turnover_rate"],     
         sme_data["csr_spending"],
+        sme_data["workplace_score"],
+        sme_data["emergency_score"],
         sme_data["fin_reporting_freq"],
         sme_data["has_policies"],
         sme_data["inspection_result"]
@@ -346,7 +361,7 @@ def get_id(sme_id):
 
     # Get sme detail
     df1 = pd.read_sql("""
-        SELECT sme_id, business_name, created_at
+        SELECT sme_id, business_name, industry_sector, region, created_at
         FROM sme
         WHERE sme_id = ?
     """, conn, params=(sme_id,))
@@ -412,18 +427,3 @@ def display_sme_data(sme_id):
     df_transformed.columns = ["Field", "Value"]
     df_transformed["Field"] = df_transformed["Field"].replace(FIELD_LABELS)
     return df_transformed
-
-# delete sme
-def delete_sme(sme_id):
-    conn = sqlite3.connect("esg_scoring.db")
-    c = conn.cursor()
-    c.execute("DELETE FROM supplier WHERE sme_id = ?", (sme_id,))
-    c.execute("DELETE FROM sme WHERE sme_id = ?", (sme_id,))
-    conn.commit()
-    conn.close()
-
-# Will remove after everything is finished
-def see_stuff():
-    conn = sqlite3.connect("esg_scoring.db")
-    df = pd.read_sql("SELECT * FROM sme", conn)
-    return df

@@ -3,7 +3,9 @@ import streamlit as st
 import streamlit.components.v1 as components
 from data.database import get_id, add_supplier, update_supplier, delete_supplier, delete_sme, display_sme_data
 from utils.ai_utils import supply_chain_map
-from utils.scoring_utils import check_supplier, sector_risk_avg, region_risk, normalize
+from utils.scoring_utils import check_supplier, sector_risk_avg, region_risk, normalize, score_sme
+from utils.report_utils import load_latest_explanation, load_sme_record, build_pdf, save_scores_chart, save_supply_chain_graph
+from pages.sme_analysis import render_card
 
 hide_sidebar_style = """
     <style>
@@ -25,8 +27,17 @@ back_to_analysis = st.button("Back to List of SMEs")
 if back_to_analysis:
     st.switch_page("pages/sme_analysis.py")
 
-sme_id = st.session_state.selected_sme_id
-risk_score_sme = st.session_state.selected_risk_score
+params = st.query_params
+
+sme_id = params.get("sme_id", None)
+risk_score_sme = params.get("risk_score", None)
+
+# Optionally store in session_state for reuse
+if sme_id:
+    st.session_state.sme_id = sme_id
+if risk_score_sme:
+    st.session_state.risk_score_sme = risk_score_sme
+
 smes_df, suppliers_df = get_id(int(sme_id))
 
 if smes_df.empty:
@@ -35,26 +46,21 @@ else:
     sme_id = int(smes_df["sme_id"].iloc[0])
     business_name = smes_df["business_name"].iloc[0]
     created_at = smes_df["created_at"].iloc[0]
-    st.title(f"Detail of {str(business_name)}")
+    industry_sector = smes_df["industry_sector"].iloc[0]
+    region = smes_df["region"].iloc[0]
+
+    total_score, f_score, e_score, s_score, g_score, _ = score_sme(
+                sme_id, industry_sector, region)
+    render_card(sme_id, business_name, industry_sector,
+                region, round(total_score, 2), round(f_score, 2), round(e_score, 2), round(s_score, 2), round(g_score, 2), created_at)
+
+    st.markdown("### SME Table Info")
     st.markdown(
-        f"""
-        <div style="
-            background-color: #333333;
-            border: 1px solid #ddd;
-            border-radius: 10px;
-            padding: 16px;
-            margin-bottom: 16px;
-            box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
-        ">
-            <h3 style="margin-top:0;">SME ID: {sme_id}</h3>
-            <p style="font-size: 18px; margin-bottom: 6px;"><b>Business Name:</b> {business_name}</p>
-            <p style="color: gray; font-size: 14px;">Date Created: {created_at}</p>
-        </div>
+        """
+        <hr style="height:2px;border:none;color:white;background-color:white;">
         """,
         unsafe_allow_html=True
     )
-
-    st.markdown("### SME Table Info")
     sme_df_data = display_sme_data(sme_id)
 
     st.subheader("Basic Info")
@@ -136,7 +142,7 @@ else:
                     "Bangsamoro Autonomous Region in Muslim Mindanao (BARMM)"
                 ]
             )
-            new_supplier_bp = st.file_uploader("Upload supplier's business permit", type="PDF", accept_multiple_files=False)
+            new_supplier_bp = st.file_uploader("Upload supplier's business permit", type=["PDF","JPG","PNG"], accept_multiple_files=False)
             has_bp = bool(new_supplier_bp)
 
             risk_notes = st.text_area("Enter known risks of this supplier if any", placeholder="e.g. has a known record of illegal logging")
@@ -152,7 +158,12 @@ else:
         if not suppliers_df.empty:
             with st.form("supplier_forms"):
                 st.subheader("Add new supplier form")
-                st.html("<hr>")
+                st.markdown(
+                    """
+                    <hr style="height:2px;border:none;color:white;background-color:white;">
+                    """,
+                    unsafe_allow_html=True
+                )
                 new_supplier_name = st.text_input("Add new supplier")
                 new_supplier_sector = st.selectbox(
                     "Industry Sector of Supplier",
@@ -207,7 +218,12 @@ else:
             st.session_state.edit_supplier_id = None
 
         st.html("<br>")
-        st.html("<hr>")
+        st.markdown(
+            """
+            <hr style="height:2px;border:none;color:white;background-color:white;">
+            """,
+            unsafe_allow_html=True
+        )
         for _, row in suppliers_df.iterrows():
             supplier_id = int(row['supplier_id'])
             supplier_name = row['supplier_name']
@@ -216,21 +232,21 @@ else:
             supplier_permit = row['supplier_permit']
             id_of_sme = row['sme_id']
 
-            name_score = float(check_supplier(str(supplier_name)))
+            name_score = abs(float(check_supplier(str(supplier_name)))-100)
 
             sector_df = sector_risk_avg(str(supplier_sector))
-            sector_score = normalize(float(sector_df["avg_score"].iloc[0]), 0, 10)
+            sector_score = abs(normalize(float(sector_df["avg_score"].iloc[0]), 0, 10)-100)
 
             region_df = region_risk(str(supplier_region))
-            region_score = abs(float(region_df["score"].iloc[0]) - 100)
+            region_score = float(region_df["score"].iloc[0])
 
-            permit_score = 0 if int(supplier_permit) == 1 else 50
+            permit_score = 100 if int(supplier_permit) == 1 else 50
 
             #lower the better
             final_score = (name_score + sector_score + region_score + permit_score) / 4
 
             cols = st.columns([3, 1, 1])
-            cols[0].write(f"**{supplier_name}** — Risk Score: {final_score:.2f}%")
+            cols[0].write(f"**{supplier_name}** — Score: {final_score:.2f}%")
             cols[0].write(f"**{supplier_sector}**")
             cols[0].write(f"**{supplier_region}**")
 
@@ -291,7 +307,12 @@ else:
             if cols[2].button("🗑️ Delete", key=f"del_{supplier_id}"):
                 delete_supplier(supplier_id)
                 st.rerun()
-            st.html("<hr>")
+            st.markdown(
+                """
+                <hr style="height:2px;border:none;color:white;background-color:white;">
+                """,
+                unsafe_allow_html=True
+            )
 
 st.html("<br>")
 st.subheader("Supply Chain Map of this SME")
@@ -300,6 +321,30 @@ with open(html_path, 'r', encoding="utf-8") as f:
     html_content = f.read()
 
 components.html(html_content, height=512, scrolling=True)
+
+donwload_report = st.button("Download Report")
+
+if donwload_report:
+    with st.spinner("Building Report..."):
+        explanation, scored_at = load_latest_explanation(sme_id)
+        if not explanation:
+            st.error("No audit_log entry found for this SME.")
+        else:
+            sme_info = load_sme_record(sme_id)
+            if not sme_info:
+                st.error("SME record not found in `sme` table.")
+            else:
+                scores_chart = save_scores_chart(explanation)
+                sc_graph = save_supply_chain_graph(sme_info, explanation)
+                pdf_bytes = build_pdf(sme_info, explanation, scored_at, scores_chart, sc_graph)
+
+                filename = f"audit_report_sme_{sme_id}.pdf"
+                st.download_button(
+                    label="⬇️ Download PDF",
+                    data=pdf_bytes,
+                    file_name=filename,
+                    mime="application/pdf"
+                )
 
 if "confirm_delete" not in st.session_state:
     st.session_state.confirm_delete = False
