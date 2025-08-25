@@ -3,11 +3,24 @@ import streamlit as st
 import streamlit.components.v1 as components
 import seaborn as sns
 import matplotlib.pyplot as plt
-from data.database import get_id, get_audit_score, add_supplier, update_supplier, delete_supplier, delete_sme, display_sme_data
-from utils.ai_utils import supply_chain_map
-from utils.scoring_utils import check_supplier, sector_risk_avg, region_risk, normalize, score_sme
-from utils.report_utils import load_latest_explanation, load_sme_record, build_pdf, save_scores_chart, save_supply_chain_graph
+def db_utils():
+    from data.database import (
+        get_id, get_audit_score, add_supplier, update_supplier,
+        delete_supplier, delete_sme, display_sme_data
+    )
+    return get_id, get_audit_score, add_supplier, update_supplier, delete_supplier, delete_sme, display_sme_data
 
+def ai_utils():
+    from utils.ai_utils import supply_chain_map
+    return supply_chain_map
+
+def scoring_utils():
+    from utils.scoring_utils import check_supplier, sector_risk_avg, region_risk, normalize, score_sme
+    return check_supplier, sector_risk_avg, region_risk, normalize, score_sme
+
+def report_utils():
+    from utils.report_utils import load_latest_explanation, load_sme_record, build_pdf, save_scores_chart, save_supply_chain_graph
+    return load_latest_explanation, load_sme_record, build_pdf, save_scores_chart, save_supply_chain_graph
 hide_sidebar_style = """
     <style>
         /* Hide sidebar completely */
@@ -39,6 +52,7 @@ if sme_id:
 if risk_score_sme:
     st.session_state.risk_score_sme = risk_score_sme
 
+get_id, get_audit_score, add_supplier, update_supplier, delete_supplier, delete_sme, display_sme_data = db_utils()
 smes_df, suppliers_df = get_id(int(sme_id))
 
 if smes_df.empty:
@@ -50,8 +64,7 @@ else:
     industry_sector = smes_df["industry_sector"].iloc[0]
     region = smes_df["region"].iloc[0]
 
-    total_score, f_score, e_score, s_score, g_score, _ = score_sme(
-                sme_id, industry_sector, region)
+    check_supplier, sector_risk_avg, region_risk, normalize, score_sme = scoring_utils()
     final_score, f_score, e_score, s_score, g_score, explanation = score_sme(
         sme_id, industry_sector, region
     )
@@ -460,9 +473,12 @@ else:
                 )
                 save_key = f"save_{supplier_id}"
                 if cols[1].button("Save Changes", key=save_key):
-                    update_supplier(supplier_id, edit_supplier_name, edit_supplier_sector, edit_supplier_region, id_of_sme)
-                    st.session_state.edit_supplier_id = None
-                    st.rerun()
+                    if not all([edit_supplier_name, edit_supplier_region, edit_supplier_region]):
+                        st.warning("Please fill out name, sector and region of supplier")
+                    else:
+                        update_supplier(supplier_id, edit_supplier_name, edit_supplier_sector, edit_supplier_region, id_of_sme)
+                        st.session_state.edit_supplier_id = None
+                        st.rerun()
 
             # Delete button
             if cols[2].button("🗑️ Delete", key=f"del_{supplier_id}"):
@@ -477,6 +493,7 @@ else:
 
 st.html("<br>")
 st.subheader("Supply Chain Map of this SME")
+supply_chain_map = ai_utils()
 html_path = supply_chain_map(sme_id, risk_score_sme)
 with open(html_path, 'r', encoding="utf-8") as f:
     html_content = f.read()
@@ -506,6 +523,7 @@ donwload_report = st.button("Download Report")
 
 if donwload_report:
     with st.spinner("Building Report..."):
+        load_latest_explanation, load_sme_record, build_pdf, save_scores_chart, save_supply_chain_graph = report_utils()
         explanation, scored_at = load_latest_explanation(sme_id)
         if not explanation:
             st.error("No audit_log entry found for this SME.")
@@ -538,6 +556,6 @@ if st.session_state.confirm_delete:
         delete_sme(sme_id)
         st.success("SME deleted successfully. Switching to Home page...")
         time.sleep(2)
-        st.switch_page("Home.py")
+        st.switch_page("app.py")
     if st.button("Cancel"):
         st.session_state.confirm_delete = False

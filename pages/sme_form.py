@@ -1,8 +1,14 @@
 import time
 import streamlit as st
 from data.database import temp_insert_sme, save_to_uploads, update_sme_files
-from utils.ai_utils import get_text_from_file, generate_summary
-from utils.scoring_utils import sector_risk_avg, region_risk
+
+def ai_utils2():
+    from utils.ai_utils import get_text_from_file, generate_summary
+    return get_text_from_file, generate_summary
+
+def scoring_utils2():
+    from utils.scoring_utils import sector_risk_avg, region_risk
+    return sector_risk_avg, region_risk 
 
 hide_sidebar_style = """
     <style>
@@ -19,6 +25,8 @@ hide_sidebar_style = """
 """
 st.markdown(hide_sidebar_style, unsafe_allow_html=True)
 st.set_page_config(page_title="ESG Input Form", layout="wide")
+
+get_text_from_file, generate_summary = ai_utils2()
 
 # Initialize Session State
 if "sme_step" not in st.session_state:
@@ -99,6 +107,7 @@ if st.session_state.sme_step == 1:
             if not all([business_name, business_permit, industry_sector, region, num_employees, avg_annual_revenue, years_in_operation]):
                 st.warning("Please fill out all fields.")
             else:
+                sector_risk_avg, region_risk = scoring_utils2()
                 sector_stability = sector_risk_avg(industry_sector)
                 region_score = region_risk(region)
                 st.session_state.sme_data.update({
@@ -115,6 +124,7 @@ if st.session_state.sme_step == 1:
                 st.session_state.sme_step = 2
 
 elif st.session_state.sme_step == 2:
+
     with st.form("form2"):
         waste_management = st.selectbox(
             "Waste Management Practices",
