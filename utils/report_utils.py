@@ -25,10 +25,25 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image, PageBreak
 
 DB_PATH = "esg_scoring.db"  
-OPENAI_MODEL = "gpt-4.1"
-env_path = Path("C:/Users/admin/Desktop/VS CODE PROJECTS/Microfund-AI/.env")
-load_dotenv(dotenv_path=env_path)
-load_dotenv()  
+def get_openai_client():
+    try:
+        import streamlit as st
+        from streamlit.errors import StreamlitAPIException, StreamlitSecretNotFoundError
+        api_key = st.secrets["OPENAI_API_KEY"]
+        print("✅ Using API key from Streamlit secrets")
+    except (ModuleNotFoundError, KeyError, StreamlitSecretNotFoundError, StreamlitAPIException):
+        # fallback to local .env
+        from dotenv import load_dotenv
+        env_path = Path("C:/Users/kyan so/OneDrive/Documents/Z_Personal/ESG_Scoring/.env")
+        load_dotenv(dotenv_path=env_path)
+        api_key = os.getenv("OPENAI_API_KEY")
+        if api_key:
+            print("✅ Using API key from local .env")
+        else:
+            raise ValueError("❌ OPENAI_API_KEY not found. Add it to .env or Streamlit secrets.")
+    
+    from openai import OpenAI
+    return OpenAI(api_key=api_key)
 
 # Get json and date created
 def load_latest_explanation(sme_id, db_path=DB_PATH):
@@ -122,7 +137,7 @@ def save_supply_chain_graph(sme_info, explanation) -> str:
 # Generates Risk analysis
 def draft_risk_analysis(explanation, sme_info):
     
-    client = OpenAI()
+    client = get_openai_client()
 
     # Construct concise, structured prompt
     prompt = f"""
@@ -159,7 +174,7 @@ def draft_risk_analysis(explanation, sme_info):
         """
 
     resp = client.chat.completions.create(
-        model=OPENAI_MODEL,
+        model="gpt-4.1",
         temperature=0.4,
         messages=[
             {"role": "system", "content": "You are a senior ESG analyst."},
