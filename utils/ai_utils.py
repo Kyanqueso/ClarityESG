@@ -16,30 +16,25 @@ from pyvis.network import Network
 #load_dotenv(dotenv_path=env_path)
 #load_dotenv()
 
-try:
-    import streamlit as st
-    from streamlit.errors import StreamlitAPIException, StreamlitSecretNotFoundError
-    api_key = st.secrets["OPENAI_API_KEY"]
-    print("✅ Using API key from Streamlit secrets")
-except (ModuleNotFoundError, KeyError, StreamlitSecretNotFoundError, StreamlitAPIException):
-    # Fallback to local .env
-    from dotenv import load_dotenv
-
-    env_path = Path("C:/Users/kyan so/OneDrive/Documents/Z_Personal/ESG_Scoring/.env")
-    load_dotenv(dotenv_path=env_path)
-    api_key = os.getenv("OPENAI_API_KEY")
-    if api_key:
-        print("✅ Using API key from local .env")
-    else:
-        raise ValueError(
-            "❌ OPENAI_API_KEY not found. "
-            "Add it to .env for local or Streamlit secrets for deployment."
-        )
+def get_openai_client():
+    try:
+        import streamlit as st
+        from streamlit.errors import StreamlitAPIException, StreamlitSecretNotFoundError
+        api_key = st.secrets["OPENAI_API_KEY"]
+        print("✅ Using API key from Streamlit secrets")
+    except (ModuleNotFoundError, KeyError, StreamlitSecretNotFoundError, StreamlitAPIException):
+        # fallback to local .env
+        from dotenv import load_dotenv
+        env_path = Path("C:/Users/kyan so/OneDrive/Documents/Z_Personal/ESG_Scoring/.env")
+        load_dotenv(dotenv_path=env_path)
+        api_key = os.getenv("OPENAI_API_KEY")
+        if api_key:
+            print("✅ Using API key from local .env")
+        else:
+            raise ValueError("❌ OPENAI_API_KEY not found. Add it to .env or Streamlit secrets.")
     
-if not api_key:
-    raise ValueError("❌ OPENAI_API_KEY not found. Please check your .env file.")
-
-client = OpenAI(api_key=api_key)
+    from openai import OpenAI
+    return OpenAI(api_key=api_key)
 
 # ==========================
 def encode_image(pil_image):
@@ -49,6 +44,7 @@ def encode_image(pil_image):
 
 def run_gpt_ocr(base64_img, ext="jpeg"):
     """Send an image (base64) to GPT-4o for OCR and interpretation."""
+    client = get_openai_client()
     response = client.chat.completions.create(
         model="gpt-4o",
         messages=[{
@@ -116,7 +112,7 @@ def get_text_from_file(file_obj, file_type=None):
     return {"pages": results}
 
 def generate_summary(prompt):
-    client = OpenAI()
+    client = get_openai_client()
 
     response = client.chat.completions.create(
         model="gpt-4.1",
