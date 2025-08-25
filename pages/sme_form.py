@@ -411,6 +411,7 @@ elif st.session_state.sme_step == 4:
             
             update_sme_files(sme_id, business_permit_file, payroll_file, bir_income_tax_file) 
             
-            st.success("Submission successful, switching you back to Home...")
-            time.sleep(3)
-            st.switch_page("app.py")
+            st.success("Submission successful! Redirecting to Home in 3 seconds...")
+            st.markdown("""
+                <meta http-equiv="refresh" content="3;url=/">
+            """, unsafe_allow_html=True)

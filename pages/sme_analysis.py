@@ -93,7 +93,7 @@ def render_card(sme_id, business_name, industry_sector, region, risk_score, f_sc
             ✅ Low Risk
         </span>
         """
-    elif 40 <= risk_score <= 70:
+    elif 40 <= risk_score < 71:
         risk_badge = """
         <span class="status-badge" style="background-color:#fff3cd; color:#856404;">
             ⚠️ Medium Risk
@@ -107,88 +107,90 @@ def render_card(sme_id, business_name, industry_sector, region, risk_score, f_sc
         """
     # Main card HTML
     st.html(f"""
-      <div class="loan-card">
-        <!-- Header -->
-        <div class="d-flex justify-content-between align-items-start">
-          <div>
-            <h5 class="mb-1">{business_name}</h5>
-            <small class="text-muted">SME ID: {sme_id} | Created: {created_at}</small>
-          </div>
-          <div>
-              {risk_badge}
-          </div>
-        </div>
-        
-        <hr style="height:2px;border:none;color:white;background-color:white;">
-        <br>
-
-        <!-- Main Content -->
-        <div class="row">
-          <!-- Industry Sector -->
-          <div class="col-md-6">
-            <h6 class="fw-bold">Industry & Location</h6>
-            <hr>
-            <div class="d-flex justify-content-between mb-1">
-              <p class="mb-0">Industry:</p>
-              <p class="mb-0 fw-bold text-end">{industry_sector}</p>
+          <div class="loan-card">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-start">
+              <div>
+                <h5 class="mb-1">{business_name}</h5>
+                <small class="text-muted">SME ID: {sme_id} | Created: {created_at}</small>
+              </div>
+              <div>
+                {risk_badge}
+              </div>
             </div>
-            <div class="d-flex justify-content-between mb-1">
-              <p class="mb-0">Region:</p>
-              <p class="mb-0 text-success fw-bold">{region}</p>
-            </div>
-          </div>
-
-          <!-- ESG Assessment -->
-          <div class="col-md-6">
-            <h6 class="fw-bold">AI-Powered ESG Assessment</h6>
             <hr>
-            <div class="d-flex align-items-start">
-              <!-- Score -->
-              <div class="esg-score me-4" style="padding-right:20px;">
-                <div class="d-flex align-items-baseline">
-                    <span class="big text-primary">{risk_score}</span>
-                    <span class="small">/100</span>
+
+            <!-- Main Content -->
+            <div class="row">
+              <!-- Industry Sector -->
+              <div class="col-md-6">
+                <h6 class="fw-bold">Industry & Location</h6>
+                <hr>
+                <div class="d-flex justify-content-between mb-1">
+                  <p class="mb-0">Industry:</p>
+                  <p class="mb-0 fw-bold text-end">{industry_sector}</p>
+                </div>
+                <div class="d-flex justify-content-between mb-1">
+                  <p class="mb-0">Region:</p>
+                  <p class="mb-0 text-success fw-bold">{region}</p>
                 </div>
               </div>
 
-              <!-- ESG Bars -->
-              <div class="flex-grow-1">
-                <div class="esg-row d-flex align-items-center">
-                  <small class="esg-label f">F</small>
-                  <div class="progress flex-grow-1">
-                    <div class="progress-bar bg-orange" style="width: {f_score}%"></div>
+              <!-- ESG Assessment -->
+              <div class="col-md-6">
+                <h6 class="fw-bold">AI-Powered ESG Assessment</h6>
+                <hr>
+                <div class="d-flex align-items-start">
+                  <!-- Score -->
+                  <div class="esg-score me-4" style="padding-right:20px;">
+                    <div class="d-flex align-items-baseline">
+                        <span class="big text-primary">{risk_score:.2f}</span>
+                        <span class="small">/100</span>
+                    </div>
                   </div>
-                </div>
-                <div class="esg-row d-flex align-items-center">
-                  <small class="esg-label e">E</small>
-                  <div class="progress flex-grow-1">
-                    <div class="progress-bar bg-success" style="width: {e_score}%"></div>
-                  </div>
-                </div>
-                <div class="esg-row d-flex align-items-center">
-                  <small class="esg-label s">S</small>
-                  <div class="progress flex-grow-1">
-                    <div class="progress-bar bg-warning" style="width: {s_score}%"></div>
-                  </div>
-                </div>
-                <div class="esg-row d-flex align-items-center">
-                  <small class="esg-label g">G</small>
-                  <div class="progress flex-grow-1">
-                    <div class="progress-bar bg-info" style="width: {g_score}%"></div>
+
+                  <!-- ESG Bars -->
+                  <div class="flex-grow-1">
+                    <div class="esg-row d-flex align-items-center">
+                      <small class="esg-label f">F</small>
+                      <div class="progress flex-grow-1">
+                        <div class="progress-bar bg-orange" style="width: {f_score:.2f}%"></div>
+                      </div>
+                      <small class="esg-label f">{f_score:.2f}%</small>
+                    </div>
+                    <div class="esg-row d-flex align-items-center">
+                      <small class="esg-label e">E</small>
+                      <div class="progress flex-grow-1">
+                        <div class="progress-bar bg-success" style="width: {e_score:.2f}%"></div>
+                      </div>
+                      <small class="esg-label e">  {e_score:.2f}%</small>
+                    </div>
+                    <div class="esg-row d-flex align-items-center">
+                      <small class="esg-label s">S</small>
+                      <div class="progress flex-grow-1">
+                        <div class="progress-bar bg-warning" style="width: {s_score:.2f}%"></div>
+                      </div>
+                      <small class="esg-label s">  {s_score:.2f}%</small>
+                    </div>
+                    <div class="esg-row d-flex align-items-center">
+                      <small class="esg-label g">G</small>
+                      <div class="progress flex-grow-1">
+                        <div class="progress-bar bg-info" style="width: {g_score:.2f}%"></div>
+                      </div>
+                      <small class="esg-label g">  {g_score:.2f}%</small>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
+            <hr>
+              <!-- Buttons -->
+              <div class="d-flex justify-content-end gap-2">
+                <a href="/sme_details?sme_id={sme_id}&risk_score={risk_score}" class="btn btn-outline-secondary">
+                  View Details
+                </a>
+              </div>
           </div>
-        </div>
-
-        <hr>
-        <!-- Buttons -->
-        <div class="d-flex justify-content-end gap-2">
-          <a href="/sme_details?sme_id={sme_id}&risk_score={risk_score}" class="btn btn-outline-secondary">
-            View Details
-          </a>
-        </div>
       </div>
     """)
 
@@ -227,3 +229,5 @@ else:
              )
     else:
         st.info("No SME Data yet")
+
+        

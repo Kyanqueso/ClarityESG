@@ -170,7 +170,6 @@ def score_sme(sme_id, industry_sector, region, db_path="esg_scoring.db"):
                                        "Quarterly": 75, 
                                        "Yearly": 50, 
                                        "Daily":75}.get(sme['fin_reporting_freq'].iloc[0], 50)
-    #gov_components['bir_tax'] = # check bir tax if good or not, return score /100 or normalize moments
     gov_components['inspection_score'] = float(sme["inspection_score"].iloc[0])
 
     gov_score = sum(gov_components.values()) / len(gov_components)

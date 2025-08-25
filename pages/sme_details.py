@@ -128,7 +128,7 @@ else:
                 ✅ Low Risk
             </span>
             """
-        elif 40 <= risk_score <= 70:
+        elif 40 <= risk_score < 71:
             risk_badge = """
             <span class="status-badge" style="background-color:#fff3cd; color:#856404;">
                 ⚠️ Medium Risk
@@ -190,31 +190,35 @@ else:
                       <div class="progress flex-grow-1">
                         <div class="progress-bar bg-orange" style="width: {f_score:.2f}%"></div>
                       </div>
+                      <small class="esg-label f">{f_score:.2f}%</small>
                     </div>
                     <div class="esg-row d-flex align-items-center">
                       <small class="esg-label e">E</small>
                       <div class="progress flex-grow-1">
                         <div class="progress-bar bg-success" style="width: {e_score:.2f}%"></div>
                       </div>
+                      <small class="esg-label e">  {e_score:.2f}%</small>
                     </div>
                     <div class="esg-row d-flex align-items-center">
                       <small class="esg-label s">S</small>
                       <div class="progress flex-grow-1">
                         <div class="progress-bar bg-warning" style="width: {s_score:.2f}%"></div>
                       </div>
+                      <small class="esg-label s">  {s_score:.2f}%</small>
                     </div>
                     <div class="esg-row d-flex align-items-center">
                       <small class="esg-label g">G</small>
                       <div class="progress flex-grow-1">
                         <div class="progress-bar bg-info" style="width: {g_score:.2f}%"></div>
                       </div>
+                      <small class="esg-label g">  {g_score:.2f}%</small>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        """)
+          """)
 
     # ✅ Render the SME card with full ESG breakdown
     render_card(
@@ -554,8 +558,9 @@ if st.session_state.confirm_delete:
     st.warning("Are you sure you want to delete this SME?")
     if st.button("Yes, delete permanently"):
         delete_sme(sme_id)
-        st.success("SME deleted successfully. Switching to Home page...")
-        time.sleep(2)
-        st.switch_page("app.py")
+        st.success("Deletion successful! Redirecting to Home in 3 seconds...")
+        st.markdown("""
+            <meta http-equiv="refresh" content="3;url=/">
+        """, unsafe_allow_html=True)
     if st.button("Cancel"):
         st.session_state.confirm_delete = False
