@@ -92,6 +92,8 @@ def init_region_risk():
             score REAL
         );
     """)
+    conn.commit()
+    conn.close()
 
 def init_supplier_watchlist():
     conn = sqlite3.connect("esg_scoring.db")
@@ -118,6 +120,8 @@ def init_audit_log():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
     """)
+    conn.commit()
+    conn.close()
 #========================================================================
 # INSERT
 # Must be only used once
