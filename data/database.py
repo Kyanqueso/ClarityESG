@@ -3,7 +3,6 @@ import os
 import uuid
 import pandas as pd
 import json
-from utils.ai_utils import philgeps_blacklist, sec_suspended
 
 # Initializations 
 def init_db():
@@ -191,7 +190,11 @@ def insert_to_region_risks():
     conn.close()
 
 # Must be only used once
-def insert_to_suppliers_watchlist(): # for bir csv and philgeps
+def insert_to_suppliers_watchlist():  # for bir csv and philgeps
+    from utils.ai_utils import philgeps_blacklist  # import inside function
+    import pandas as pd
+    import sqlite3
+
     conn = sqlite3.connect("esg_scoring.db")
     c = conn.cursor()
     
@@ -201,42 +204,27 @@ def insert_to_suppliers_watchlist(): # for bir csv and philgeps
     df2 = pd.DataFrame(philgeps_blacklist())
     df2_better = df2[["BUSINESS_NAME", "RISK_TAG"]]
 
-    if "BUSINESS_NAME" not in df_better.columns or "RISK_TAG" not in df_better.columns:
-        raise ValueError("BUSINESS_NAME or RISK_TAG column not found")
-    
-    if "BUSINESS_NAME" not in df2_better.columns or "RISK_TAG" not in df2_better.columns:
-        raise ValueError("BUSINESS_NAME or RISK_TAG column not found")
+    records = list(df_better.itertuples(index=False, name=None))
+    c.executemany("INSERT INTO supplier_watchlist (business_name, risk_tag) VALUES (?, ?)", records)
 
-    records = list(df_better[["BUSINESS_NAME", "RISK_TAG"]].itertuples(index=False, name=None))
-
-    c.executemany(f"""
-        INSERT INTO supplier_watchlist (business_name, risk_tag) VALUES (?, ?)
-    """, records)
-
-    records2 = list(df2_better[["BUSINESS_NAME", "RISK_TAG"]].itertuples(index=False, name=None))
-
-    c.executemany("""
-        INSERT INTO supplier_watchlist (business_name, risk_tag) VALUES (?, ?)
-    """, records2)
+    records2 = list(df2_better.itertuples(index=False, name=None))
+    c.executemany("INSERT INTO supplier_watchlist (business_name, risk_tag) VALUES (?, ?)", records2)
 
     conn.commit()
     conn.close()
 
-# Must be only used once
-def insert_to_suppliers_watchlist2(): # for sec
+def insert_to_suppliers_watchlist2():  # for sec
+    from utils.ai_utils import sec_suspended
+    import sqlite3
+    import pandas as pd
+
     df = sec_suspended()
     df = df.rename(columns={"company_name":"BUSINESS_NAME"})
     conn = sqlite3.connect("esg_scoring.db")
     c = conn.cursor()
     
-    if "BUSINESS_NAME" not in df.columns:
-        raise ValueError("BUSINESS_NAME column not found.")
-
     records = [(name,) for name in df["BUSINESS_NAME"]]
-
-    c.executemany(f"""
-        INSERT INTO supplier_watchlist (business_name) VALUES (?)
-    """, records)
+    c.executemany("INSERT INTO supplier_watchlist (business_name) VALUES (?)", records)
 
     conn.commit()
     conn.close()
