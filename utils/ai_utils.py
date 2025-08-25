@@ -6,8 +6,6 @@ import time, random
 import io, base64, os
 from PIL import Image
 from pathlib import Path
-from dotenv import load_dotenv
-from openai import OpenAI
 from bs4 import BeautifulSoup
 from pyvis.network import Network
 

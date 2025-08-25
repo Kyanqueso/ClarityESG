@@ -8,11 +8,8 @@ import tempfile
 
 from datetime import datetime
 from data.database import get_audit_score
-from openai import OpenAI
-from dotenv import load_dotenv
 from pathlib import Path
 
-import streamlit as st
 import seaborn as sns
 import pandas as pd
 import networkx as nx
