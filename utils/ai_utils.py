@@ -12,11 +12,30 @@ from bs4 import BeautifulSoup
 from pyvis.network import Network
 
 # Load API Key 
-env_path = Path("C:/Users/admin/Desktop/VS CODE PROJECTS/Microfund-AI/.env")
-load_dotenv(dotenv_path=env_path)
-load_dotenv()
+#env_path = Path("C:/Users/kyan so/OneDrive/Documents/Z_Personal/ESG_Scoring/.env")
+#load_dotenv(dotenv_path=env_path)
+#load_dotenv()
 
-api_key = os.getenv("OPENAI_API_KEY")
+try:
+    import streamlit as st
+    from streamlit.errors import StreamlitAPIException, StreamlitSecretNotFoundError
+    api_key = st.secrets["OPENAI_API_KEY"]
+    print("✅ Using API key from Streamlit secrets")
+except (ModuleNotFoundError, KeyError, StreamlitSecretNotFoundError, StreamlitAPIException):
+    # Fallback to local .env
+    from dotenv import load_dotenv
+
+    env_path = Path("C:/Users/kyan so/OneDrive/Documents/Z_Personal/ESG_Scoring/.env")
+    load_dotenv(dotenv_path=env_path)
+    api_key = os.getenv("OPENAI_API_KEY")
+    if api_key:
+        print("✅ Using API key from local .env")
+    else:
+        raise ValueError(
+            "❌ OPENAI_API_KEY not found. "
+            "Add it to .env for local or Streamlit secrets for deployment."
+        )
+    
 if not api_key:
     raise ValueError("❌ OPENAI_API_KEY not found. Please check your .env file.")
 
