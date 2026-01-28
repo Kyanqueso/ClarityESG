@@ -1,9 +1,22 @@
 import streamlit as st
-from data.database import init_db, init_supplier, init_esg_sector_risks, init_supplier_watchlist, init_region_risk, init_audit_log, insert_esg_scores, insert_to_suppliers_watchlist, insert_to_suppliers_watchlist2, insert_to_region_risks
 
-st.set_page_config(page_title="Home", layout="wide")
+from data.database import (
+    init_db,
+    init_supplier,
+    init_esg_sector_risks,
+    init_supplier_watchlist,
+    init_region_risk,
+    init_audit_log,
+)
 
-# initialize the sqlite database
+# --------------------------------------------------
+# PAGE CONFIG (MUST BE FIRST)
+# --------------------------------------------------
+st.set_page_config(page_title="ClarityESG", layout="wide")
+
+# --------------------------------------------------
+# DATABASE INIT
+# --------------------------------------------------
 init_db()
 init_supplier()
 init_esg_sector_risks()
@@ -11,139 +24,97 @@ init_supplier_watchlist()
 init_region_risk()
 init_audit_log()
 
-# Must run once only
-#insert_esg_scores()
-#insert_to_suppliers_watchlist()
-#insert_to_suppliers_watchlist2()
-#insert_to_region_risks()
+# --------------------------------------------------
+# GLOBAL CSS
+# --------------------------------------------------
+st.markdown("""
+<style>
 
-hide_sidebar_style = """
-    <style>
-        /* Hide sidebar completely */
-        [data-testid="stSidebar"] {
-            display: none;
-        }
+/* Hide sidebar */
+[data-testid="stSidebar"],
+[data-testid="collapsedControl"] {
+    display: none;
+}
 
-        /* Hide the top-right hamburger and fullscreen buttons */
-        [data-testid="collapsedControl"] {
-            display: none;
-        }
-    </style>
-"""
-st.markdown(hide_sidebar_style, unsafe_allow_html=True)
+/* Base card-button styling */
+div.stButton > button {
+    border-radius: 22px;
+    padding: 36px 28px;
+    height: 220px;
+    width: 100%;
+    border: none;
+    color: white !important;
+    box-shadow: 0px 8px 24px rgba(0,0,0,0.25);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+    text-align: center;
+    white-space: pre-line;
+    font-size: 20px !important;
+    font-weight: 600 !important;
+}
 
-st.markdown(
-            '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" crossorigin="anonymous">',
-             unsafe_allow_html=True
-        )
-st.markdown(
-    '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous">',
-    unsafe_allow_html=True
-)
-st.html("""
-    <style>
-        body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            font-family: 'Segoe UI', sans-serif;
-            color: #fff;
-            margin: 0;
-            padding: 0;
-        }
+/* Hover effect */
+div.stButton > button:hover {
+    transform: translateY(-8px);
+    box-shadow: 0px 14px 40px rgba(0,0,0,0.45);
+}
 
-        .container {
-            max-width: 900px;
-            margin: 60px auto;
-            text-align: center;
-        }
+/* Individual button colors with gradients */
+/* Input SME - Green gradient */
+.input-card-btn button {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+}
 
-        .container h1 {
-            font-size: 3rem;
-            font-weight: 700;
-            margin-bottom: 10px;
-            text-shadow: 2px 2px 6px rgba(0,0,0,0.3);
-        }
+/* Analyze SMEs - Blue gradient */
+.analyze-card-btn button {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%) !important;
+}
 
-        .container h4 {
-            font-weight: 400;
-            margin-bottom: 50px;
-        }
+/* Statistics - Purple gradient */
+.stats-card-btn button {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%) !important;
+}
 
-        .card-container {
-            display: flex;
-            justify-content: center;
-            flex-wrap: wrap;
-            gap: 30px;
-        }
-        a.card {
-            cursor: pointer;
-            text-decoration: none;
-            color: white  
-        }
-        .card {
-            background: rgba(255,255,255,0.1);
-            border-radius: 20px;
-            padding: 30px;
-            width: 220px;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            text-align: center;
-            box-shadow: 0px 8px 20px rgba(0,0,0,0.3);
-        }
-        .card-form {
-            background: linear-gradient(135deg, #ff7e5f, #feb47b);
-        }
+</style>
+""", unsafe_allow_html=True)
 
-        .card-analyze {
-            background: linear-gradient(135deg, #6a11cb, #2575fc);
-        }
+# --------------------------------------------------
+# HEADER
+# --------------------------------------------------
+st.markdown("<h1 style='text-align:center;'>Welcome to ClarityESG</h1>", unsafe_allow_html=True)
+st.markdown("<h4 style='text-align:center; font-weight:400;'>Select an Action</h4>", unsafe_allow_html=True)
+st.divider()
 
-        .card-stats {
-            background: linear-gradient(135deg, #43cea2, #185a9d);
-        }
+# --------------------------------------------------
+# CARDS (BUTTONS THAT ACT AS CARDS)
+# --------------------------------------------------
+col1, col2, col3 = st.columns(3, gap="large")
 
-        .card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0px 12px 30px rgba(0,0,0,0.5);
-            filter: brightness(1.1);
-        }
+with col1:
+    st.markdown('<div class="input-card-btn">', unsafe_allow_html=True)
+    if st.button(
+        "➕  Input SME\n\nAdd and manage SME ESG data",
+        key="input_card",
+        use_container_width=True,
+    ):
+        st.switch_page("pages/sme_form.py")
+    st.markdown('</div>', unsafe_allow_html=True)
 
-        .card i {
-            font-size: 3rem;
-            margin-bottom: 15px;
-            color: #fff;
-        }
+with col2:
+    st.markdown('<div class="analyze-card-btn">', unsafe_allow_html=True)
+    if st.button(
+        "📈  Analyze SMEs\n\nRun ESG scoring & analysis",
+        key="analyze_card",
+        use_container_width=True,
+    ):
+        st.switch_page("pages/sme_analysis.py")
+    st.markdown('</div>', unsafe_allow_html=True)
 
-        .card h5 {
-            font-size: 1.2rem;
-            margin-bottom: 0;
-            font-weight: 600;
-        }
-
-        hr {
-            border-top: 2px solid rgba(255,255,255,0.5);
-            width: 50%;
-            margin: 30px auto;
-        }
-        </style>
-
-        <div class="container">
-            <h1>Welcome to ClarityESG!</h1>
-            <h4>Select an Action</h4>
-            <hr>
-
-            <div class="card-container">
-                <a href="/sme_form" class="card card-form">
-                    <i class="fas fa-plus-circle"></i>
-                    <h5>Input SME</h5>
-                </a>
-                <a href="/sme_analysis" class="card card-analyze">
-                    <i class="fas fa-chart-line"></i>
-                    <h5>Analyze SMEs</h5>
-                </a>
-                <a href="/statistics" class="card card-stats">
-                    <i class="fas fa-chart-pie"></i>
-                    <h5>Statistics</h5>
-                </a>
-            </div>
-        </div>
-    """)
+with col3:
+    st.markdown('<div class="stats-card-btn">', unsafe_allow_html=True)
+    if st.button(
+        "📊  Statistics\n\nView ESG insights & trends",
+        key="stats_card",
+        use_container_width=True,
+    ):
+        st.switch_page("pages/statistics.py")
+    st.markdown('</div>', unsafe_allow_html=True)
