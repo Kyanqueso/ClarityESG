@@ -82,7 +82,7 @@ div.stButton > button:hover {
 # --------------------------------------------------
 st.markdown("<h1 style='text-align:center;'>Welcome to ClarityESG</h1>", unsafe_allow_html=True)
 st.markdown("<h4 style='text-align:center; font-weight:400;'>Select an Action</h4>", unsafe_allow_html=True)
-st.divider()
+st.markdown("<br>", unsafe_allow_html=True)
 
 # --------------------------------------------------
 # CARDS (BUTTONS THAT ACT AS CARDS)
