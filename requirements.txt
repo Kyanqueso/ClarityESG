@@ -11,3 +11,4 @@ reportlab
 requests
 seaborn
 streamlit
+altair==4.2.2
