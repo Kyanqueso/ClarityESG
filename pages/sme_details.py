@@ -3,6 +3,8 @@ import streamlit as st
 import streamlit.components.v1 as components
 import seaborn as sns
 import matplotlib.pyplot as plt
+
+
 def db_utils():
     from data.database import (
         get_id, get_audit_score, add_supplier, update_supplier,
@@ -35,7 +37,6 @@ hide_sidebar_style = """
     </style>
 """
 st.markdown(hide_sidebar_style, unsafe_allow_html=True)
-st.set_page_config(page_title="Details of SME", layout="wide")
 
 back_to_analysis = st.button("Back to List of SMEs")
 if back_to_analysis:

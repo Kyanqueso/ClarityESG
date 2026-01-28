@@ -2,6 +2,7 @@ import streamlit as st
 from data.database import get_all_smes, search_name
 from utils.scoring_utils import score_sme
 
+
 hide_sidebar_style = """
     <style>
         /* Hide sidebar completely */
@@ -16,7 +17,6 @@ hide_sidebar_style = """
     </style>
 """
 st.markdown(hide_sidebar_style, unsafe_allow_html=True)
-st.set_page_config(page_title="List of registered SMEs", layout="wide")
 
 back_to_home = st.button("Back to Home")
 if back_to_home:

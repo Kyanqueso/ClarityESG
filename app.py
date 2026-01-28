@@ -1,6 +1,8 @@
 import streamlit as st
 from data.database import init_db, init_supplier, init_esg_sector_risks, init_supplier_watchlist, init_region_risk, init_audit_log, insert_esg_scores, insert_to_suppliers_watchlist, insert_to_suppliers_watchlist2, insert_to_region_risks
 
+st.set_page_config(page_title="Home", layout="wide")
+
 # initialize the sqlite database
 init_db()
 init_supplier()
@@ -29,7 +31,6 @@ hide_sidebar_style = """
     </style>
 """
 st.markdown(hide_sidebar_style, unsafe_allow_html=True)
-st.set_page_config(page_title="Home", layout="wide")
 
 st.markdown(
             '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" crossorigin="anonymous">',

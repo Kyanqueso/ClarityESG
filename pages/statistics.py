@@ -30,7 +30,6 @@ hide_sidebar_style = """
     </style>
 """
 st.markdown(hide_sidebar_style, unsafe_allow_html=True)
-st.set_page_config(page_title="Statistics Page", layout="wide")
 
 if st.button("Back to Home"):
     st.switch_page("app.py")

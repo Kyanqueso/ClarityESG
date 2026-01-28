@@ -2,6 +2,7 @@ import time
 import streamlit as st
 from data.database import temp_insert_sme, save_to_uploads, update_sme_files
 
+
 def ai_utils2():
     from utils.ai_utils import get_text_from_file, generate_summary
     return get_text_from_file, generate_summary
@@ -24,7 +25,6 @@ hide_sidebar_style = """
     </style>
 """
 st.markdown(hide_sidebar_style, unsafe_allow_html=True)
-st.set_page_config(page_title="ESG Input Form", layout="wide")
 
 get_text_from_file, generate_summary = ai_utils2()
 
