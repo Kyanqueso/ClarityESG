@@ -10,5 +10,5 @@ python-dotenv
 reportlab
 requests
 seaborn
-streamlit
+streamlit==1.20
 altair==4.2.2
