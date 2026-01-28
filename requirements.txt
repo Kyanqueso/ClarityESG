@@ -10,4 +10,4 @@ python-dotenv
 reportlab
 requests
 seaborn
-streamlit
+streamlit==1.18.1
