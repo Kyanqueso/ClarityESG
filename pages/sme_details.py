@@ -221,7 +221,7 @@ else:
           </div>
           """)
 
-    # ✅ Render the SME card with full ESG breakdown
+    # Render the SME card with full ESG breakdown
     render_card(
         sme_id, business_name, industry_sector, region,
         final_score, f_score, e_score, s_score, g_score, created_at
@@ -242,20 +242,20 @@ else:
         "Region", "Number of Employees", "Average Annual Revenue",
         "Years in Operation", "Created At"
     ])])
-    st.html("<br>")
+    st.markdown("<br>", unsafe_allow_html=True)
 
     st.subheader("Financial Info")
     st.table(sme_df_data[sme_df_data["Field"].isin([
         "Is SME Profitable?", "Sector Stability Score", "Market Competition Score"
     ])])
-    st.html("<br>")
+    st.markdown("<br>", unsafe_allow_html=True)
 
     st.subheader("Environment Info")
     st.table(sme_df_data[sme_df_data["Field"].isin([
         "Location Hazard Score", "Has Business Continuity Plan?", "Energy Usage",
         "Water Usage", "Waste Management", "DENR Permits", "Greenhouse Gas Emissions"
     ])])
-    st.html("<br>")
+    st.markdown("<br>", unsafe_allow_html=True)
 
     st.subheader("Social Info")
     st.table(sme_df_data[sme_df_data["Field"].isin([
@@ -263,14 +263,14 @@ else:
         "Employee Turnover Rate", "Payroll File", "CSR Spending",
         "Workplace Safety", "Emergency Preparedness"
     ])])
-    st.html("<br>")
+    st.markdown("<br>", unsafe_allow_html=True)
 
     st.subheader("Governance Info")
     st.table(sme_df_data[sme_df_data["Field"].isin([
         "Financial Reporting Frequency", "BIR Income Tax File",
         "Has Policies", "Inspection Score"
     ])])
-    st.html("<br>")
+    st.markdown("<br>", unsafe_allow_html=True)
 
     st.markdown("### Suppliers")
     if suppliers_df.empty:
@@ -396,7 +396,7 @@ else:
         if 'edit_supplier_id' not in st.session_state:
             st.session_state.edit_supplier_id = None
 
-        st.html("<br>")
+        st.markdown("<br>", unsafe_allow_html=True)
         st.markdown(
             """
             <hr style="height:2px;border:none;color:white;background-color:white;">
@@ -496,7 +496,7 @@ else:
                 unsafe_allow_html=True
             )
 
-st.html("<br>")
+st.markdown("<br>", unsafe_allow_html=True)
 st.subheader("Supply Chain Map of this SME")
 supply_chain_map = ai_utils()
 html_path = supply_chain_map(sme_id, risk_score_sme)
@@ -521,7 +521,7 @@ plt.xticks(rotation=70, color='white')
 plt.yticks(color='white')
 
 st.pyplot(plt)
-st.html("<br>")
+st.markdown("<br>", unsafe_allow_html=True)
 plt.clf()
 
 donwload_report = st.button("Download Report")

@@ -36,7 +36,7 @@ if st.button("Back to Home"):
 
 st.header("Statistics of Sectors and Regions of the Philippines")
 st.text("Last Updated: August 25, 2025")
-st.html("<hr>")
+st.markdown("<br>", unsafe_allow_html=True)
 
 sector_df = sector_risk_avg()
 
@@ -45,11 +45,11 @@ luzon_df = region_df.iloc[0:8]
 visayas_df = region_df.iloc[8:11]
 mindanao_df = region_df.iloc[10:17]
 
-st.html("<br>")
+st.markdown("<br>", unsafe_allow_html=True)
 st.subheader("Current PH Sector risk scores (Lower the Better):")
 
 st.table(sector_df[["sector", "env_risk", "soc_risk", "gov_risk"]])
-st.html("<br>")
+st.markdown("<br>", unsafe_allow_html=True)
 
 sns.set_theme(style="darkgrid", rc={"axes.facecolor": "#111", "figure.facecolor": "#111"})
 sns.barplot(x = "sector", y="avg_score", data=sector_df, color="#967311")
@@ -59,12 +59,12 @@ plt.xticks(rotation=90, color='white')
 plt.yticks(color='white')
   
 st.pyplot(plt)
-st.html("<br>")
+st.markdown("<br>", unsafe_allow_html=True)
 plt.clf()
 
 st.subheader("Luzon Region Scores (Higher the Better):")
 st.table(luzon_df)
-st.html("<br>")
+st.markdown("<br>", unsafe_allow_html=True)
 
 sns.set_theme(style="darkgrid", rc={"axes.facecolor": "#111", "figure.facecolor": "#111"})
 sns.barplot(x = "region", y="score", data=luzon_df, color="green")
@@ -74,12 +74,12 @@ plt.xticks(rotation=90, color='white')
 plt.yticks(color='white')
 
 st.pyplot(plt)
-st.html("<br>")
+st.markdown("<br>", unsafe_allow_html=True)
 plt.clf()
 
 st.subheader("Visayas Region Scores (Higher the Better):")
 st.table(visayas_df)
-st.html("<br>")
+st.markdown("<br>", unsafe_allow_html=True)
 
 sns.set_theme(style="darkgrid", rc={"axes.facecolor": "#111", "figure.facecolor": "#111"})
 sns.barplot(x = "region", y="score", data=visayas_df, color="blue")
@@ -89,12 +89,12 @@ plt.xticks(rotation=90, color='white')
 plt.yticks(color='white')
 
 st.pyplot(plt)
-st.html("<br>")
+st.markdown("<br>", unsafe_allow_html=True)
 plt.clf()
 
 st.subheader("Mindanao Region Scores (Higher the Better):")
 st.table(mindanao_df)
-st.html("<br>")
+st.markdown("<br>", unsafe_allow_html=True)
 
 sns.set_theme(style="darkgrid", rc={"axes.facecolor": "#111", "figure.facecolor": "#111"})
 sns.barplot(x = "region", y="score", data=mindanao_df, color="#b37125")
@@ -104,5 +104,5 @@ plt.xticks(rotation=90, color='white')
 plt.yticks(color='white')
 
 st.pyplot(plt)
-st.html("<br>")
+st.markdown("<br>", unsafe_allow_html=True)
 plt.clf()
