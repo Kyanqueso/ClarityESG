@@ -4,6 +4,41 @@ import streamlit.components.v1 as components
 import seaborn as sns
 import matplotlib.pyplot as plt
 
+# Module-level constants to avoid repeated duplication
+SECTORS = [
+    "Agriculture",
+    "Banking and Finance",
+    "Business and Services",
+    "Construction and Real Estate",
+    "Energy Sector",
+    "Fisheries and Aquaculture",
+    "Forestry and Logging",
+    "Manufacturing",
+    "Mining and Quarrying",
+    "Logistics and Transportation"
+]
+
+REGIONS = [
+    "",
+    "National Capital Region (NCR)",
+    "Ilocos Region (Region I)",
+    "Cagayan Valley (Region II)",
+    "Cordillera Administrative Region (CAR)",
+    "Central Luzon (Region III)",
+    "CALABARZON (Region IV-A)",
+    "MIMAROPA Region (Region IV-B)",
+    "Bicol Region (Region V)",
+    "Western Visayas (Region VI)",
+    "Central Visayas (Region VII)",
+    "Eastern Visayas (Region VIII)",
+    "Zamboanga Peninsula (Region IX)",
+    "Northern Mindanao (Region X)",
+    "Davao Region (Region XI)",
+    "SOCCSKSARGEN (Region XII)",
+    "Caraga (Region XIII)",
+    "Bangsamoro Autonomous Region in Muslim Mindanao (BARMM)"
+]
+
 
 def db_utils():
     from data.database import (
@@ -23,6 +58,7 @@ def scoring_utils():
 def report_utils():
     from utils.report_utils import load_latest_explanation, load_sme_record, build_pdf, save_scores_chart, save_supply_chain_graph
     return load_latest_explanation, load_sme_record, build_pdf, save_scores_chart, save_supply_chain_graph
+
 hide_sidebar_style = """
     <style>
         /* Hide sidebar completely */
@@ -85,7 +121,7 @@ else:
                     border-radius: 10px;
                     box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.2);
                     padding: 20px;
-                    background: {bg_color}; 
+                    background: {bg_color};
                     color: var(--text-color);
                     margin-bottom: 20px;
                     border: 1px solid rgba(255,255,255,0.1);
@@ -105,9 +141,9 @@ else:
                 align-items: center;
                 gap: 5px;
               }}
-              .progress {{ 
+              .progress {{
                   height: 6px;
-                  border-radius: 5px; 
+                  border-radius: 5px;
                   margin: 0;
               }}
               .esg-row {{
@@ -277,54 +313,18 @@ else:
         st.info("No suppliers yet for this SME.")
         with st.form("supplier_forms"):
             new_supplier_name = st.text_input("Add new supplier")
-            new_supplier_sector = st.selectbox(
-                "Industry Sector of Supplier",
-                [
-                    "Agriculture",
-                    "Banking and Finance",
-                    "Business and Services",
-                    "Construction and Real Estate",
-                    "Energy Sector",
-                    "Fisheries and Aquaculture",
-                    "Forestry and Logging",
-                    "Manufacturing",
-                    "Mining and Quarrying",
-                    "Logistics and Transportation"
-                ]
-            )
-            new_supplier_region = st.selectbox(
-                "Region location of business",
-                [
-                    "",
-                    "National Capital Region (NCR)",
-                    "Ilocos Region (Region I)",
-                    "Cagayan Valley (Region II)",
-                    "Cordillera Administrative Region (CAR)",
-                    "Central Luzon (Region III)",
-                    "CALABARZON (Region IV-A)",
-                    "MIMAROPA Region (Region IV-B)",
-                    "Bicol Region (Region V)",
-                    "Western Visayas (Region VI)",
-                    "Central Visayas (Region VII)",
-                    "Eastern Visayas (Region VIII)",
-                    "Zamboanga Peninsula (Region IX)",
-                    "Northern Mindanao (Region X)",
-                    "Davao Region (Region XI)",
-                    "SOCCSKSARGEN (Region XII)",
-                    "Caraga (Region XIII)",
-                    "Bangsamoro Autonomous Region in Muslim Mindanao (BARMM)"
-                ]
-            )
-            new_supplier_bp = st.file_uploader("Upload supplier's business permit", type=["PDF","JPG","PNG"], accept_multiple_files=False)
+            new_supplier_sector = st.selectbox("Industry Sector of Supplier", SECTORS)
+            new_supplier_region = st.selectbox("Region location of business", REGIONS)
+            new_supplier_bp = st.file_uploader("Upload supplier's business permit", type=["PDF", "JPG", "PNG"], accept_multiple_files=False)
             has_bp = bool(new_supplier_bp)
 
             risk_notes = st.text_area("Enter known risks of this supplier if any", placeholder="e.g. has a known record of illegal logging")
-            
+
             submit_btn_supplier1 = st.form_submit_button("Add Supplier")
 
             if submit_btn_supplier1:
-                if not all([new_supplier_name, new_supplier_region, new_supplier_region]):
-                        st.warning("Please fill out name, sector and region of supplier")
+                if not all([new_supplier_name, new_supplier_sector, new_supplier_region]):
+                    st.warning("Please fill out name, sector and region of supplier")
                 else:
                     has_bp = True if has_bp is not None else False
                     add_supplier(sme_id, new_supplier_name, new_supplier_sector, new_supplier_region, has_bp)
@@ -341,51 +341,15 @@ else:
                     unsafe_allow_html=True
                 )
                 new_supplier_name = st.text_input("Add new supplier")
-                new_supplier_sector = st.selectbox(
-                    "Industry Sector of Supplier",
-                    [
-                        "Agriculture",
-                        "Banking and Finance",
-                        "Business and Services",
-                        "Construction and Real Estate",
-                        "Energy Sector",
-                        "Fisheries and Aquaculture",
-                        "Forestry and Logging",
-                        "Manufacturing",
-                        "Mining and Quarrying",
-                        "Logistics and Transportation"
-                    ]
-                )
-                new_supplier_region = st.selectbox(
-                    "Region location of business",
-                    [
-                        "",
-                        "National Capital Region (NCR)",
-                        "Ilocos Region (Region I)",
-                        "Cagayan Valley (Region II)",
-                        "Cordillera Administrative Region (CAR)",
-                        "Central Luzon (Region III)",
-                        "CALABARZON (Region IV-A)",
-                        "MIMAROPA Region (Region IV-B)",
-                        "Bicol Region (Region V)",
-                        "Western Visayas (Region VI)",
-                        "Central Visayas (Region VII)",
-                        "Eastern Visayas (Region VIII)",
-                        "Zamboanga Peninsula (Region IX)",
-                        "Northern Mindanao (Region X)",
-                        "Davao Region (Region XI)",
-                        "SOCCSKSARGEN (Region XII)",
-                        "Caraga (Region XIII)",
-                        "Bangsamoro Autonomous Region in Muslim Mindanao (BARMM)"
-                    ]
-                )
-                new_supplier_bp = st.file_uploader("Upload supplier's business permit", type="PDF", accept_multiple_files=False)
+                new_supplier_sector = st.selectbox("Industry Sector of Supplier", SECTORS)
+                new_supplier_region = st.selectbox("Region location of business", REGIONS)
+                new_supplier_bp = st.file_uploader("Upload supplier's business permit", type=["PDF", "JPG", "PNG"], accept_multiple_files=False)
                 risk_notes = st.text_area("Enter known risks of this supplier if any", placeholder="e.g. has a known record of illegal logging")
 
                 submit_btn_supplier2 = st.form_submit_button("Add Supplier")
 
                 if submit_btn_supplier2:
-                    if not all([new_supplier_name, new_supplier_region, new_supplier_region]):
+                    if not all([new_supplier_name, new_supplier_sector, new_supplier_region]):
                         st.warning("Please fill out name, sector and region of supplier")
                     else:
                         has_bp = True if new_supplier_bp is not None else False
@@ -411,21 +375,32 @@ else:
             supplier_permit = row['supplier_permit']
             id_of_sme = row['sme_id']
 
-            name_score = abs(float(check_supplier(str(supplier_name)))-100)
+            # Higher is better: check_supplier returns 0.0–1.0; multiply by 100 before inverting
+            name_score = abs(float(check_supplier(str(supplier_name))) * 100 - 100)
 
             sector_df = sector_risk_avg(str(supplier_sector))
-            sector_score = abs(normalize(float(sector_df["avg_score"].iloc[0]), 0, 10)-100)
+            sector_score = abs(normalize(float(sector_df["avg_score"].iloc[0]), 0, 10) - 100)
 
             region_df = region_risk(str(supplier_region))
             region_score = float(region_df["score"].iloc[0])
 
             permit_score = 100 if int(supplier_permit) == 1 else 50
 
-            #lower the better
             final_score = (name_score + sector_score + region_score + permit_score) / 4
 
+            # Risk badge for supplier (higher score = lower risk)
+            if final_score >= 71:
+                sup_badge = '<span style="background-color:#d4edda;color:#155724;padding:2px 8px;border-radius:10px;font-size:0.85rem;">✅ Low Risk</span>'
+            elif final_score >= 40:
+                sup_badge = '<span style="background-color:#fff3cd;color:#856404;padding:2px 8px;border-radius:10px;font-size:0.85rem;">⚠️ Medium Risk</span>'
+            else:
+                sup_badge = '<span style="background-color:#f8d7da;color:#721c24;padding:2px 8px;border-radius:10px;font-size:0.85rem;">❌ High Risk</span>'
+
             cols = st.columns([3, 1, 1])
-            cols[0].write(f"**{supplier_name}** — Score: {final_score:.2f}%")
+            cols[0].markdown(
+                f"**{supplier_name}** — Score: {final_score:.2f}% &nbsp; {sup_badge}",
+                unsafe_allow_html=True
+            )
             cols[0].write(f"**{supplier_sector}**")
             cols[0].write(f"**{supplier_region}**")
 
@@ -436,49 +411,11 @@ else:
             # If this supplier is being edited, show input + save button
             if st.session_state.edit_supplier_id == supplier_id:
                 edit_supplier_name = st.text_input("Supplier Name", supplier_name, key=f"name_{supplier_id}")
-
-                edit_supplier_sector = st.selectbox(
-                    "Industry Sector of Supplier",
-                    [
-                        "Agriculture",
-                        "Banking and Finance",
-                        "Business and Services",
-                        "Construction and Real Estate",
-                        "Energy Sector",
-                        "Fisheries and Aquaculture",
-                        "Forestry and Logging",
-                        "Manufacturing",
-                        "Mining and Quarrying",
-                        "Logistics and Transportation"
-                    ], key=f"sector_{supplier_id}"
-                )
-
-                edit_supplier_region = st.selectbox(
-                    "Region location of business",
-                    [
-                        "",
-                        "National Capital Region (NCR)",
-                        "Ilocos Region (Region I)",
-                        "Cagayan Valley (Region II)",
-                        "Cordillera Administrative Region (CAR)",
-                        "Central Luzon (Region III)",
-                        "CALABARZON (Region IV-A)",
-                        "MIMAROPA Region (Region IV-B)",
-                        "Bicol Region (Region V)",
-                        "Western Visayas (Region VI)",
-                        "Central Visayas (Region VII)",
-                        "Eastern Visayas (Region VIII)",
-                        "Zamboanga Peninsula (Region IX)",
-                        "Northern Mindanao (Region X)",
-                        "Davao Region (Region XI)",
-                        "SOCCSKSARGEN (Region XII)",
-                        "Caraga (Region XIII)",
-                        "Bangsamoro Autonomous Region in Muslim Mindanao (BARMM)"
-                    ], key=f"region_{supplier_id}"
-                )
+                edit_supplier_sector = st.selectbox("Industry Sector of Supplier", SECTORS, key=f"sector_{supplier_id}")
+                edit_supplier_region = st.selectbox("Region location of business", REGIONS, key=f"region_{supplier_id}")
                 save_key = f"save_{supplier_id}"
                 if cols[1].button("Save Changes", key=save_key):
-                    if not all([edit_supplier_name, edit_supplier_region, edit_supplier_region]):
+                    if not all([edit_supplier_name, edit_supplier_sector, edit_supplier_region]):
                         st.warning("Please fill out name, sector and region of supplier")
                     else:
                         update_supplier(supplier_id, edit_supplier_name, edit_supplier_sector, edit_supplier_region, id_of_sme)
@@ -524,9 +461,9 @@ st.pyplot(plt)
 st.markdown("<br>", unsafe_allow_html=True)
 plt.clf()
 
-donwload_report = st.button("Download Report")
+download_report = st.button("Download Report")
 
-if donwload_report:
+if download_report:
     with st.spinner("Building Report..."):
         load_latest_explanation, load_sme_record, build_pdf, save_scores_chart, save_supply_chain_graph = report_utils()
         explanation, scored_at = load_latest_explanation(sme_id)

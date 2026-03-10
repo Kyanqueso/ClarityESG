@@ -432,6 +432,7 @@ def delete_sme(sme_id):
     conn = sqlite3.connect("esg_scoring.db")
     c = conn.cursor()
     c.execute("DELETE FROM supplier WHERE sme_id = ?", (sme_id,))
+    c.execute("DELETE FROM audit_log WHERE sme_id = ?", (sme_id,))
     c.execute("DELETE FROM sme WHERE sme_id = ?", (sme_id,))
     conn.commit()
     conn.close()

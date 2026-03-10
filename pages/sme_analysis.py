@@ -34,29 +34,33 @@ st.markdown(
     unsafe_allow_html=True
 )
 
+@st.cache_data(ttl=120, show_spinner=False)
+def cached_score_sme(sme_id, industry_sector, region):
+    return score_sme(sme_id, industry_sector, region)
+
 def render_card(sme_id, business_name, industry_sector, region, risk_score, f_score, e_score, s_score, g_score, created_at):
     bg_color = st.get_option("theme.backgroundColor")
     st.markdown(
         '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" crossorigin="anonymous">',
         unsafe_allow_html=True
     )
-    st.markdown("""
+    st.markdown(f"""
         <style>
-          .loan-card {
+          .loan-card {{
                 border-radius: 10px;
                 box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.2);
                 padding: 20px;
-                background: {bg_color}; 
+                background: {bg_color};
                 color: var(--text-color);
                 margin-bottom: 20px;
                 border: 1px solid rgba(255,255,255,0.1);
                 transition: background 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease;
-            }
-            .loan-card:hover {
+            }}
+            .loan-card:hover {{
                 box-shadow: 0px 8px 20px rgba(0,0,0,0.3);
                 transform: translateY(-2px);
-            }
-          .status-badge {
+            }}
+          .status-badge {{
             background-color: #e7f3ff;
             color: #084298;
             font-size: 0.9rem;
@@ -65,25 +69,24 @@ def render_card(sme_id, business_name, industry_sector, region, risk_score, f_sc
             display: inline-flex;
             align-items: center;
             gap: 5px;
-          }
-          .progress { 
-              height: 6px;  /* slimmer */
-              border-radius: 5px; 
-              margin: 0; /* remove extra vertical spacing */
-           }
-          .esg-row {
-              margin-bottom: 4px !important; /* smaller gap between rows */
-           }
-          .progress { height: 8px; border-radius: 5px; }
-          .esg-score .big { font-size: 2rem; font-weight: bold; }
-          .esg-score .small { font-size: 1rem; }
-          .esg-label { font-weight: bold; padding-right: 8px; }
-          .esg-label.e { color: #198754; }
-          .esg-label.s { color: #ffc107; }
-          .esg-label.g { color: #0dcaf0; }
-          .esg-label.f { color: orange; }
-          .bg-orange { background-color: orange; }
-          
+          }}
+          .progress {{
+              height: 6px;
+              border-radius: 5px;
+              margin: 0;
+           }}
+          .esg-row {{
+              margin-bottom: 4px !important;
+           }}
+          .esg-score .big {{ font-size: 2rem; font-weight: bold; }}
+          .esg-score .small {{ font-size: 1rem; }}
+          .esg-label {{ font-weight: bold; padding-right: 8px; }}
+          .esg-label.e {{ color: #198754; }}
+          .esg-label.s {{ color: #ffc107; }}
+          .esg-label.g {{ color: #0dcaf0; }}
+          .esg-label.f {{ color: orange; }}
+          .bg-orange {{ background-color: orange; }}
+
         </style>
     """, unsafe_allow_html=True)
 
@@ -201,7 +204,7 @@ if search_btn and search_field.strip():
 
     if search_results:
         for i, (sme_id, business_name, industry_sector, region, created_at) in enumerate(search_results, start=1):
-            risk_score, f_score, e_score, s_score, g_score, _ = score_sme(
+            risk_score, f_score, e_score, s_score, g_score, _ = cached_score_sme(
                 sme_id, industry_sector, region)
             render_card(sme_id, business_name, industry_sector,
                         region, round(risk_score, 2), round(f_score, 2), round(e_score, 2), round(s_score, 2), round(g_score, 2), created_at)
@@ -217,7 +220,7 @@ else:
     smes = get_all_smes()
     if smes:
         for i, (sme_id, business_name, industry_sector, region, created_at) in enumerate(smes, start=1):
-            risk_score, f_score, e_score, s_score, g_score, _ = score_sme(
+            risk_score, f_score, e_score, s_score, g_score, _ = cached_score_sme(
                 sme_id, industry_sector, region)
             render_card(sme_id, business_name, industry_sector,
                         region, round(risk_score, 2), round(f_score, 2), round(e_score, 2), round(s_score, 2), round(g_score, 2), created_at)
@@ -229,5 +232,3 @@ else:
              )
     else:
         st.info("No SME Data yet")
-
-        

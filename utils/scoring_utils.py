@@ -5,6 +5,19 @@ import numpy as np
 import pandas as pd
 from data.database import get_id
 
+# Module-level watchlist cache to avoid reloading on every check_supplier call
+_watchlist_cache = None
+
+def _get_watchlist():
+    global _watchlist_cache
+    if _watchlist_cache is None:
+        conn = sqlite3.connect("esg_scoring.db")
+        c = conn.cursor()
+        c.execute("SELECT business_name, risk_tag FROM supplier_watchlist")
+        _watchlist_cache = c.fetchall()
+        conn.close()
+    return _watchlist_cache
+
 # Supplier risk tracker
 def clean_sme_name(name):
     replace_words = ["INCORPORATED", "CORPORATION", "RESPONDENT", "INC", "COMPANY", ".", ","]
@@ -14,12 +27,8 @@ def clean_sme_name(name):
     return " ".join(name.split())
 
 def check_supplier(supplier_name: str, threshold: float = 0.8):
-    conn = sqlite3.connect("esg_scoring.db")
-    c = conn.cursor()
-    c.execute("SELECT business_name, risk_tag FROM supplier_watchlist")
-    watchlist = c.fetchall()
-    conn.close()
-    
+    watchlist = _get_watchlist()
+
     results = []
     s_clean = clean_sme_name(supplier_name)
 
@@ -33,8 +42,8 @@ def check_supplier(supplier_name: str, threshold: float = 0.8):
                 "risk_tag": risk_tag,
                 "score": score
             })
-    
-    # return highest score if any match, otherwise 0
+
+    # return highest similarity score (0.0–1.0) if any match, otherwise 0
     if results:
         return max(r["score"] for r in results)
     return 0.0
@@ -43,18 +52,20 @@ def check_supplier(supplier_name: str, threshold: float = 0.8):
 def normalize(value, min_val, max_val):
     if value is None:
         return 0
-    return max(0, min (100, (value - min_val) / (max_val - min_val) * 100))
+    return max(0, min(100, (value - min_val) / (max_val - min_val) * 100))
 
 # get sector risk
 def sector_risk_avg(sector_name):
-    conn = sqlite3.connect("esg_scoring.db") 
+    conn = sqlite3.connect("esg_scoring.db")
     df = pd.read_sql("SELECT * FROM esg_sector_risks WHERE sector = ?", conn, params=(sector_name,))
-    df["avg_score"] = (df["env_risk"] + df["soc_risk"] + df["gov_risk"])/3
-    return df[["sector","avg_score"]]
+    conn.close()
+    df["avg_score"] = (df["env_risk"] + df["soc_risk"] + df["gov_risk"]) / 3
+    return df[["sector", "avg_score"]]
 
 def region_risk(region_name):
     conn = sqlite3.connect("esg_scoring.db")
     df = pd.read_sql("SELECT * FROM region_risks WHERE region = ?", conn, params=(region_name,))
+    conn.close()
     return df
 
 # Scoring method or formula for SMEs
@@ -65,7 +76,7 @@ def score_sme(sme_id, industry_sector, region, db_path="esg_scoring.db"):
     if sme.empty:
         conn.close()
         raise ValueError("SME ID not found in database")
-    
+
     c = conn.cursor()
 
     # Financial
@@ -73,8 +84,8 @@ def score_sme(sme_id, industry_sector, region, db_path="esg_scoring.db"):
     financial_components["profitability"] = 100 if (int(sme["is_profitable"].iloc[0]) == 1) else 50
 
     sector_score = sector_risk_avg(industry_sector)
-    financial_components['sector_stability'] = abs(normalize(float(sector_score['avg_score'].iloc[0]), 0, 10) - 100) 
-    financial_components['market_competition'] = abs(normalize(int(sme['market_competition'].iloc[0]), 0, 10) - 100) # need source
+    financial_components['sector_stability'] = abs(normalize(float(sector_score['avg_score'].iloc[0]), 0, 10) - 100)
+    financial_components['market_competition'] = abs(normalize(int(sme['market_competition'].iloc[0]), 0, 10) - 100)
 
     financial_score = sum(financial_components.values()) / len(financial_components)
 
@@ -88,10 +99,10 @@ def score_sme(sme_id, industry_sector, region, db_path="esg_scoring.db"):
 
     raw_value = sme['energy_usage'].iloc[0]
 
-    if pd.isna(raw_value): #check if NA
+    if pd.isna(raw_value):
         env_components['energy_usage'] = 25
     else:
-        energy_use = float(str(raw_value).replace("kwh","").strip())
+        energy_use = float(str(raw_value).replace("kwh", "").strip())
 
         if energy_use == 0:
             env_components['energy_usage'] = 25
@@ -105,11 +116,11 @@ def score_sme(sme_id, industry_sector, region, db_path="esg_scoring.db"):
             env_components['energy_usage'] = 25
 
     raw_value2 = sme['water_usage'].iloc[0]
-    
+
     if pd.isna(raw_value2):
         env_components['water_usage'] = 25
     else:
-        water_use = water_use = float(str(raw_value2).replace("m3", "").replace("l", "").strip())
+        water_use = float(str(raw_value2).replace("m3", "").replace("l", "").strip())
 
         if water_use == 0:
             env_components['water_usage'] = 25
@@ -130,14 +141,14 @@ def score_sme(sme_id, industry_sector, region, db_path="esg_scoring.db"):
         "Recycling program in place": 50,
         "Comprehensive waste reduction + recycling + tracking": 75,
         "Zero-waste or closed-loop operations": 100
-        }.get(sme["waste_management"].iloc[0], 0)
-    
+    }.get(sme["waste_management"].iloc[0], 0)
+
     raw_value3 = sme['ghg_emissions'].iloc[0]
 
     if pd.isna(raw_value3):
         env_components['ghg_emissions'] = 25
     else:
-        ghg = float(str(raw_value3).replace("kg CO2e","").strip())
+        ghg = float(str(raw_value3).replace("kg CO2e", "").strip())
 
         if ghg == 0:
             env_components['ghg_emissions'] = 25
@@ -166,10 +177,10 @@ def score_sme(sme_id, industry_sector, region, db_path="esg_scoring.db"):
 
     # Governance
     gov_components = {}
-    gov_components['fin_reporting'] = {"Monthly":100, 
-                                       "Quarterly": 75, 
-                                       "Yearly": 50, 
-                                       "Daily":75}.get(sme['fin_reporting_freq'].iloc[0], 50)
+    gov_components['fin_reporting'] = {"Monthly": 100,
+                                       "Quarterly": 75,
+                                       "Yearly": 50,
+                                       "Daily": 75}.get(sme['fin_reporting_freq'].iloc[0], 50)
     gov_components['inspection_score'] = float(sme["inspection_score"].iloc[0])
 
     gov_score = sum(gov_components.values()) / len(gov_components)
@@ -178,20 +189,19 @@ def score_sme(sme_id, industry_sector, region, db_path="esg_scoring.db"):
     gov_score_bonus = gov_score + has_policies
 
     # Supply Chain Score
-    _, data = get_id(sme_id)  
+    _, data = get_id(sme_id)
 
     supplier_scores = []
     supplier_breakdowns = []
-    for supplier_name, supplier_sector, supplier_region, supplier_permit in zip(data.supplier_name, 
+    for supplier_name, supplier_sector, supplier_region, supplier_permit in zip(data.supplier_name,
                                                                                 data.supplier_sector,
                                                                                 data.supplier_region,
                                                                                 data.supplier_permit):
-        
-        # Higher the better
-        name_score = abs(float(check_supplier(str(supplier_name))) - 100)
+        # Higher is better. check_supplier returns 0.0–1.0; multiply by 100 before inverting.
+        name_score = abs(float(check_supplier(str(supplier_name))) * 100 - 100)
 
         sector_df = sector_risk_avg(str(supplier_sector))
-        sector_score = abs(normalize(float(sector_df["avg_score"].iloc[0]), 0, 10)-100)
+        sector_score = abs(normalize(float(sector_df["avg_score"].iloc[0]), 0, 10) - 100)
 
         region_df = region_risk(str(supplier_region))
         region_score = float(region_df["score"].iloc[0])
@@ -212,7 +222,7 @@ def score_sme(sme_id, industry_sector, region, db_path="esg_scoring.db"):
 
     # Calculate grand total score
     base_score = (0.15 * financial_score + 0.30 * env_score_bonus + 0.30 * soc_score + 0.25 * gov_score_bonus)
-    
+
     final_score = (base_score * 0.60) + (average_supplier_score * 0.40)
 
     # Save to audit log
@@ -223,12 +233,12 @@ def score_sme(sme_id, industry_sector, region, db_path="esg_scoring.db"):
         "governance_score": gov_score_bonus,
         "base_score": base_score,
         "suppliers_score": average_supplier_score,
-        "suppliers_detail": supplier_breakdowns,  # <--- NEW
+        "suppliers_detail": supplier_breakdowns,
         "final_score": final_score
     }
     c.execute("""
-        SELECT explanation_json FROM audit_log 
-        WHERE sme_id = ? 
+        SELECT explanation_json FROM audit_log
+        WHERE sme_id = ?
         ORDER BY created_at DESC LIMIT 1
     """, (sme_id,))
     row = c.fetchone()
@@ -236,10 +246,9 @@ def score_sme(sme_id, industry_sector, region, db_path="esg_scoring.db"):
     insert_needed = True
     if row:
         last_explanation = json.loads(row[0])
-        if abs(last_explanation["final_score"] - final_score) < 1e-6:  # same score
+        if abs(last_explanation["final_score"] - final_score) < 1e-6:
             insert_needed = False
 
-    #  Insert only if score has changed
     if insert_needed:
         c.execute(
             "INSERT INTO audit_log (sme_id, explanation_json) VALUES (?, ?)",

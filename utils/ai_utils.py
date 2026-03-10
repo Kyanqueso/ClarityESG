@@ -4,15 +4,11 @@ import requests
 import pandas as pd
 import time, random
 import io, base64, os
+import tempfile
 from PIL import Image
 from pathlib import Path
 from bs4 import BeautifulSoup
 from pyvis.network import Network
-
-# Load API Key 
-#env_path = Path("C:/Users/kyan so/OneDrive/Documents/Z_Personal/ESG_Scoring/.env")
-#load_dotenv(dotenv_path=env_path)
-#load_dotenv()
 
 def get_openai_client():
     try:
@@ -23,14 +19,14 @@ def get_openai_client():
     except (ModuleNotFoundError, KeyError, StreamlitSecretNotFoundError, StreamlitAPIException):
         # fallback to local .env
         from dotenv import load_dotenv
-        env_path = Path("C:/Users/kyan so/OneDrive/Documents/Z_Personal/ESG_Scoring/.env")
+        env_path = Path(__file__).resolve().parent.parent / ".env"
         load_dotenv(dotenv_path=env_path)
         api_key = os.getenv("OPENAI_API_KEY")
         if api_key:
             print("✅ Using API key from local .env")
         else:
             raise ValueError("❌ OPENAI_API_KEY not found. Add it to .env or Streamlit secrets.")
-    
+
     from openai import OpenAI
     return OpenAI(api_key=api_key)
 
@@ -63,11 +59,11 @@ def run_gpt_ocr(base64_img, ext="jpeg"):
 def get_text_from_file(file_obj, file_type=None):
     """
     Extract text from PDF or image using GPT-4o Vision.
-    
+
     Args:
         file_obj: file-like object or raw bytes
         file_type: MIME type string (e.g. 'application/pdf', 'image/jpeg')
-    
+
     Returns:
         dict with keys:
             - "pages": list of dicts { "page_num": int, "text": str }
@@ -91,7 +87,7 @@ def get_text_from_file(file_obj, file_type=None):
 
             base64_img = encode_image(img)
             text = run_gpt_ocr(base64_img)
-            results.append({"page_num": i+1, "text": text})
+            results.append({"page_num": i + 1, "text": text})
 
     # Handle Images
     else:
@@ -118,15 +114,20 @@ def generate_summary(prompt):
             {"role": "system", "content": "You are going to analyze a utility bill of a Filipino SME."},
             {"role": "user", "content": prompt}
         ],
-        temperature = 0,
-        max_tokens= 1024
+        temperature=0,
+        max_tokens=1024
     )
     print(response.choices[0].message.content)
     return response.choices[0].message.content
-#===================================================================
+# ===================================================================
 
 # Supply chain mapping
-def supply_chain_map(sme_id, sme_risk_score, output_file="supply_chain.html", db_path="esg_scoring.db"):
+def supply_chain_map(sme_id, sme_risk_score, output_file=None, db_path="esg_scoring.db"):
+    if output_file is None:
+        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".html")
+        output_file = tmp.name
+        tmp.close()
+
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
 
@@ -149,12 +150,12 @@ def supply_chain_map(sme_id, sme_risk_score, output_file="supply_chain.html", db
 
     # Add SME node
     net.add_node(f"SME_{sme_id_val}", label=f"{business_name} ({sme_risk_score})", color="blue", title=f"SME: {business_name}, {str(sme_risk_score)}")
-    
+
     # Add supplier nodes + edges
     for supplier_id, supplier_sme_id, supplier_name in suppliers:
         net.add_node(f"SUP_{supplier_id}", label=supplier_name, color="red", title=f"Supplier: {supplier_name}")
         net.add_edge(f"SME_{sme_id_val}", f"SUP_{supplier_id}")
-    
+
     net.save_graph(output_file)
     return output_file
 
@@ -165,14 +166,14 @@ def philgeps_blacklist():
 
     df = pd.DataFrame(data)
 
-    cleaned_df = df[["category", "blacklisted_entity", "project", "offenses", 
+    cleaned_df = df[["category", "blacklisted_entity", "project", "offenses",
                     "saction_imposed", "start_date", "end_date"]]
-    
-    cleaned_df = cleaned_df.rename(columns={"blacklisted_entity": "BUSINESS_NAME", "offenses":"RISK_TAG"})
+
+    cleaned_df = cleaned_df.rename(columns={"blacklisted_entity": "BUSINESS_NAME", "offenses": "RISK_TAG"})
     cleaned_df["RISK_TAG"] = cleaned_df["RISK_TAG"].astype(str)
     return cleaned_df
 
-def sec_suspended(): 
+def sec_suspended():
     session = requests.Session()
 
     base_url = "https://checkwithsec.sec.gov.ph"
@@ -180,12 +181,12 @@ def sec_suspended():
 
     headers = {
         "User-Agent": "Mozilla/5.0"
-    } #"Accept": "text/html,application/xhtml+xml,application/xml;q=0.9"
+    }
 
     response = session.get(suspended_url, headers=headers)
     soup = BeautifulSoup(response.text, "html.parser")
     csrf_token = soup.find("input", {"name": "_csrf"})["value"]
-    
+
     post_headers = {
         "User-Agent": "Mozilla/5.0",
         "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
@@ -200,9 +201,9 @@ def sec_suspended():
 
     while page <= max_pages:
         payload = {
-            "_csrf" : csrf_token,
-            "user_input" : "",
-            "page" : page
+            "_csrf": csrf_token,
+            "user_input": "",
+            "page": page
         }
 
         try:
@@ -212,8 +213,8 @@ def sec_suspended():
             json_data = post_response.json()
         except Exception as e:
             print(f"⚠️ Error on page {page}: {e}, retrying...")
-            time.sleep(10)   # wait longer
-            continue         # retry same page
+            time.sleep(10)
+            continue
 
         if json_data.get("status") != "success":
             print(f"⚠️ Server error on page {page}: {json_data.get('response')}")
@@ -228,6 +229,6 @@ def sec_suspended():
         print(f"✅ Page {page} scraped, got {len(companies)} records")
 
         page += 1
-        time.sleep(random.uniform(2, 5))  # slow down to avoid SEC crash
-    
+        time.sleep(random.uniform(2, 5))
+
     return pd.DataFrame(all_companies)

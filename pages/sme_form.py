@@ -9,7 +9,7 @@ def ai_utils2():
 
 def scoring_utils2():
     from utils.scoring_utils import sector_risk_avg, region_risk
-    return sector_risk_avg, region_risk 
+    return sector_risk_avg, region_risk
 
 hide_sidebar_style = """
     <style>
@@ -37,14 +37,20 @@ if "sme_data" not in st.session_state:
 back_to_home = st.button("Back to Home")
 if back_to_home:
     st.switch_page("app.py")
-    
+
 st.title("ESG Input form")
+
+# Step progress indicator
+step_labels = ["Basic Info", "Environmental", "Social", "Governance"]
+current_step = st.session_state.sme_step
+st.progress(current_step / 4)
+st.caption(f"Step {current_step} of 4 — {step_labels[current_step - 1]}")
 
 # Basics Form
 if st.session_state.sme_step == 1:
     with st.form("form1"):
         business_name = st.text_input("Enter business name (Required)")
-        business_permit = st.file_uploader("Upload business permit here (Required)", type=["PDF","JPG","PNG"], accept_multiple_files=False)
+        business_permit = st.file_uploader("Upload business permit here (Required)", type=["PDF", "JPG", "PNG"], accept_multiple_files=False)
         industry_sector = st.selectbox(
             "Industry Sector of Business (Required)",
             [
@@ -84,44 +90,46 @@ if st.session_state.sme_step == 1:
             ]
         )
         num_employees = st.number_input(
-            "Enter number of employees here (Required)", 
-            min_value=0, 
+            "Enter number of employees here (Required)",
+            min_value=0,
             value=0
         )
 
         years_in_operation = st.number_input(
-            "Enter years of operation here (Required)", 
-            min_value=0, 
+            "Enter years of operation here (Required)",
+            min_value=0,
             value=0
         )
 
         avg_annual_revenue = st.number_input(
-            "Enter estimated annual revenue (Required)", 
-            min_value=0.0, 
+            "Enter estimated annual revenue (Required)",
+            min_value=0.0,
             value=0.0
         )
 
         submit_btn1 = st.form_submit_button("Next")
 
         if submit_btn1:
-            if not all([business_name, business_permit, industry_sector, region, num_employees, avg_annual_revenue, years_in_operation]):
-                st.warning("Please fill out all fields.")
+            # Validate required text/file/selection fields (0 is a valid numeric value)
+            if not business_name.strip() or business_permit is None or not region:
+                st.warning("Please fill out all required fields: Business Name, Business Permit, and Region.")
             else:
                 sector_risk_avg, region_risk = scoring_utils2()
                 sector_stability = sector_risk_avg(industry_sector)
                 region_score = region_risk(region)
                 st.session_state.sme_data.update({
-                    "business_name":business_name,
-                    "business_permit":business_permit, # will file handling this
-                    "industry_sector":industry_sector,
+                    "business_name": business_name,
+                    "business_permit": business_permit,
+                    "industry_sector": industry_sector,
                     "sector_stability": float(sector_stability['avg_score'].iloc[0]),
-                    "region":region,
+                    "region": region,
                     "location_hazard": float(region_score['score'].iloc[0]),
-                    "num_employees":num_employees,
-                    "avg_annual_revenue":avg_annual_revenue,
-                    "years_in_operation":years_in_operation
+                    "num_employees": num_employees,
+                    "avg_annual_revenue": avg_annual_revenue,
+                    "years_in_operation": years_in_operation
                 })
                 st.session_state.sme_step = 2
+                st.rerun()
 
 elif st.session_state.sme_step == 2:
 
@@ -139,52 +147,49 @@ elif st.session_state.sme_step == 2:
         market_competition = st.slider("Enter scale 1 to 10 market competition", 0, 10)
         audited_financial_statement = st.file_uploader("Upload audited_financial_statement here", type=["PDF", "JPG", "PNG"], accept_multiple_files=False)
 
-        bcp = st.file_uploader("Upload business continuity plan here", type=["PDF","JPG","PNG"], accept_multiple_files=False)
+        bcp = st.file_uploader("Upload business continuity plan here", type=["PDF", "JPG", "PNG"], accept_multiple_files=False)
         has_bcp = bool(bcp)
 
-        utility_bill = st.file_uploader("Upload latest utility bill here (Electric Bill)", 
-                                        type=["PDF","JPG","PNG"], accept_multiple_files=False)
-        
-        water_bill = st.file_uploader("Upload latest  water bill here", type=["PDF","JPG","PNG"],
+        utility_bill = st.file_uploader("Upload latest utility bill here (Electric Bill)",
+                                        type=["PDF", "JPG", "PNG"], accept_multiple_files=False)
+
+        water_bill = st.file_uploader("Upload latest water bill here", type=["PDF", "JPG", "PNG"],
                                       accept_multiple_files=False)
 
-        permit = st.file_uploader("Upload DENR / FDA / other relevant permit here", type=["PDF","JPG","PNG"], accept_multiple_files=False)
+        permit = st.file_uploader("Upload DENR / FDA / other relevant permit here", type=["PDF", "JPG", "PNG"], accept_multiple_files=False)
         has_permit = bool(permit)
 
         submit_btn2 = st.form_submit_button("Next")
 
-        # will put error handling here if necessary
         if submit_btn2:
             with st.spinner("AI is analyzing your documents..."):
                 has_bcp = True if bcp is not None else False
 
                 profit_score = 0
                 if audited_financial_statement is not None:
-                    
                     audited_financial_statement.seek(0)
                     ocr_result = get_text_from_file(audited_financial_statement, file_type="application/pdf")
 
-                    for page in ocr_result["pages"]:
-                        print(f"--- Page {page['page_num']} ---")
-                        print(page["text"])
+                    # Join all pages for complete document analysis
+                    full_text = "\n".join(p["text"] for p in ocr_result["pages"])
 
                     prompt = f"""
-                        Extracted Text: {page["text"]}
+                        Extracted Text: {full_text}
 
-                        Extract all visible text and tables from the SME’s income statement or audited financial 
-                        statement with exact formatting, including revenues, cost of goods sold (COGS), gross profit, 
-                        operating expenses, other income/expenses, taxes, and net income. 
-                        Determine if the SME is profitable or not by analyzing. Gross profit margin trends 
-                        (Revenue – COGS). Operating profit vs. operating expenses. Net income (positive vs. negative). 
+                        Extract all visible text and tables from the SME's income statement or audited financial
+                        statement with exact formatting, including revenues, cost of goods sold (COGS), gross profit,
+                        operating expenses, other income/expenses, taxes, and net income.
+                        Determine if the SME is profitable or not by analyzing. Gross profit margin trends
+                        (Revenue – COGS). Operating profit vs. operating expenses. Net income (positive vs. negative).
                         Year-over-year growth or decline. Any unusual one-time gains/losses or auditor notes.
-                        If charts or dashboards are present, interpret KPIs such as EBITDA, net profit margin, 
-                        return on assets, or equity. Highlight risks such as persistent losses, high leverage, or 
-                        negative cash flow that may threaten sustainability. Summarize clearly whether the SME is 
-                        profitable, breaking even, or running at a loss, with concise reasoning. If no text exists, 
-                        describe the document layout, common financial ratios, and whether the statement appears 
-                        complete and credible. Explicitly flag any unclear or illegible text or numbers as 
-                        '[illegible text]' and omit them silently. 
-                        Do not invent or assume details that are not explicitly visible in the document. 
+                        If charts or dashboards are present, interpret KPIs such as EBITDA, net profit margin,
+                        return on assets, or equity. Highlight risks such as persistent losses, high leverage, or
+                        negative cash flow that may threaten sustainability. Summarize clearly whether the SME is
+                        profitable, breaking even, or running at a loss, with concise reasoning. If no text exists,
+                        describe the document layout, common financial ratios, and whether the statement appears
+                        complete and credible. Explicitly flag any unclear or illegible text or numbers as
+                        '[illegible text]' and omit them silently.
+                        Do not invent or assume details that are not explicitly visible in the document.
                         If specific information is missing, omit silently.
 
                         After all this, please only display this:
@@ -193,21 +198,19 @@ elif st.session_state.sme_step == 2:
                     """
 
                     profit_score = generate_summary(prompt)
-                    
+
                 energy_usage = ""
                 if utility_bill is not None:
-
                     utility_bill.seek(0)
                     ocr_result = get_text_from_file(utility_bill, file_type="application/pdf")
 
-                    for page in ocr_result["pages"]:
-                        print(f"--- Page {page['page_num']} ---")
-                        print(page["text"])
+                    # Join all pages for complete document analysis
+                    full_text = "\n".join(p["text"] for p in ocr_result["pages"])
 
                     prompt = f"""
-                    Extracted text:{page["text"]}
+                    Extracted text:{full_text}
 
-                    You are going to analyze the extracted texts from a utiliy bill in the context of a Philippine SME.
+                    You are going to analyze the extracted texts from a utility bill in the context of a Philippine SME.
                     Please extract the kwh and display this only:
 
                     (kwh from extracted text) where kwh is all small letters
@@ -221,21 +224,20 @@ elif st.session_state.sme_step == 2:
                     water_bill.seek(0)
                     ocr_result_two = get_text_from_file(water_bill, file_type="application/pdf")
 
-                    for page_two in ocr_result_two["pages"]:
-                        print(f"--- Page {page_two['page_num']} ---")
-                        print(page_two["text"])
+                    # Join all pages for complete document analysis
+                    full_text_water = "\n".join(p["text"] for p in ocr_result_two["pages"])
 
                     prompt = f"""
-                    Extracted text:{page_two["text"]}
+                    Extracted text:{full_text_water}
 
-                    Analyze the water bill and extract all visible text with exact formatting, including account details, 
-                    billing period, consumption volume, and cost breakdown. Identify total water consumption in cubic meters (m³) 
-                    or liters, meter readings, and any surcharges or taxes. If usage trends, charts, or tables are present, 
-                    interpret them to summarize consumption patterns, seasonal changes, and potential inefficiencies. 
-                    If no numeric consumption data exists, describe the bill’s layout, provider branding, and any contextual 
-                    clues relevant to estimating water use for ESG analysis, resource efficiency scoring, and automated 
-                    due diligence. Explicitly flag any unclear or illegible text or numbers as '[illegible text]' and 
-                    omit them silently. Do not invent or assume details that are not explicitly visible 
+                    Analyze the water bill and extract all visible text with exact formatting, including account details,
+                    billing period, consumption volume, and cost breakdown. Identify total water consumption in cubic meters (m³)
+                    or liters, meter readings, and any surcharges or taxes. If usage trends, charts, or tables are present,
+                    interpret them to summarize consumption patterns, seasonal changes, and potential inefficiencies.
+                    If no numeric consumption data exists, describe the bill's layout, provider branding, and any contextual
+                    clues relevant to estimating water use for ESG analysis, resource efficiency scoring, and automated
+                    due diligence. Explicitly flag any unclear or illegible text or numbers as '[illegible text]' and
+                    omit them silently. Do not invent or assume details that are not explicitly visible
                     in the document. If specific information is missing, omit silently as well
 
                     After all this, please only display this:
@@ -246,8 +248,20 @@ elif st.session_state.sme_step == 2:
                     """
                     water_usage = generate_summary(prompt)
 
+                # Safely parse profit score from AI response
+                try:
+                    is_profitable = int(str(profit_score).strip()) == 1
+                except (ValueError, TypeError):
+                    is_profitable = False
+
+                # Safely calculate GHG emissions; default to 0 if no utility bill uploaded
+                try:
+                    ghg_val = float(str(energy_usage).replace("kwh", "").strip()) * 0.6 if energy_usage else 0.0
+                except (ValueError, AttributeError):
+                    ghg_val = 0.0
+
                 st.session_state.sme_data.update({
-                    "is_profitable": True if int(profit_score) == 1 else False,
+                    "is_profitable": is_profitable,
                     "market_competition": market_competition,
                     "has_bcp": has_bcp,
                     "utility_bill": utility_bill,
@@ -256,9 +270,10 @@ elif st.session_state.sme_step == 2:
                     "waste_management": waste_management,
                     "permit": permit,
                     "denr_permits": has_permit,
-                    "ghg_emissions": str(float(energy_usage.replace("kwh","").strip()) * 0.6) + " kg CO2e"
+                    "ghg_emissions": str(ghg_val) + " kg CO2e"
                 })
                 st.session_state.sme_step = 3
+                st.rerun()
 
 elif st.session_state.sme_step == 3:
     with st.form("form3"):
@@ -276,18 +291,17 @@ elif st.session_state.sme_step == 3:
             "Enter percentage of employees turned over",
             min_value=0.0, max_value=100.0
         )
-        payroll = st.file_uploader("Upload payroll of business here (Required)", type=["PDF","JPG","PNG","CSV"], accept_multiple_files=False)
+        payroll = st.file_uploader("Upload payroll of business here (Required)", type=["PDF", "JPG", "PNG", "CSV"], accept_multiple_files=False)
         csr_spending = st.number_input("Enter amount spent on csr projects")
 
-        workplace_safety = st.file_uploader("Upload workplace safety document", type=["PDF","JPG","PNG"], 
+        workplace_safety = st.file_uploader("Upload workplace safety document", type=["PDF", "JPG", "PNG"],
                                             accept_multiple_files=False)
 
-        emergency_preparedness = st.file_uploader("Upload emergency preparedness related document", type=["PDF","JPG","PNG"], 
+        emergency_preparedness = st.file_uploader("Upload emergency preparedness related document", type=["PDF", "JPG", "PNG"],
                                                   accept_multiple_files=False)
 
         submit_btn3 = st.form_submit_button("Next")
 
-        # will put error handling here if necessary
         if submit_btn3:
             if payroll is None:
                 st.warning("Please upload SME's payroll.")
@@ -299,23 +313,22 @@ elif st.session_state.sme_step == 3:
                         workplace_safety.seek(0)
                         ocr_result = get_text_from_file(workplace_safety, file_type="application/pdf")
 
-                        for page in ocr_result["pages"]:
-                            print(f"--- Page {page['page_num']} ---")
-                            print(page["text"])
+                        # Join all pages for complete document analysis
+                        full_text = "\n".join(p["text"] for p in ocr_result["pages"])
 
                         prompt = f"""
-                        Extracted text:{page["text"]}
+                        Extracted text:{full_text}
 
-                        Extract all visible text from the workplace safety document with exact formatting, 
-                        including numbers, tables, checklists, regulatory citations, structured safety KPIs, 
-                        incident logs, and hazard classifications. If diagrams, safety signage, or floorplans 
-                        are present, interpret and summarize key safety measures, compliance gaps, and high-risk 
-                        areas. Identify whether the document references local labor codes, OSHA/ISO standards, 
+                        Extract all visible text from the workplace safety document with exact formatting,
+                        including numbers, tables, checklists, regulatory citations, structured safety KPIs,
+                        incident logs, and hazard classifications. If diagrams, safety signage, or floorplans
+                        are present, interpret and summarize key safety measures, compliance gaps, and high-risk
+                        areas. Identify whether the document references local labor codes, OSHA/ISO standards,
                         or SME-specific safety frameworks. Highlight potential liabilities, accident trends, and
-                        operational risks relevant to audit and due diligence. If no text exists, describe the document layout, 
-                        safety symbols, and any contextual branding or legal disclaimers. Explicitly flag any unclear 
-                        or illegible text or numbers as '[illegible text]' with context rather than omitting silently. 
-                        Do not invent or assume details that are not explicitly visible in the document. If specific 
+                        operational risks relevant to audit and due diligence. If no text exists, describe the document layout,
+                        safety symbols, and any contextual branding or legal disclaimers. Explicitly flag any unclear
+                        or illegible text or numbers as '[illegible text]' with context rather than omitting silently.
+                        Do not invent or assume details that are not explicitly visible in the document. If specific
                         information is missing, state clearly that it is not present.
 
                         After all this, pls only display this:
@@ -332,24 +345,23 @@ elif st.session_state.sme_step == 3:
                         emergency_preparedness.seek(0)
                         ocr_result = get_text_from_file(emergency_preparedness, file_type="application/pdf")
 
-                        for page in ocr_result["pages"]:
-                            print(f"--- Page {page['page_num']} ---")
-                            print(page["text"])
+                        # Join all pages for complete document analysis
+                        full_text = "\n".join(p["text"] for p in ocr_result["pages"])
 
                         prompt = f"""
-                        Extracted text:{page["text"]}
+                        Extracted text:{full_text}
 
-                        Extract all visible text from the emergency preparedness document with exact formatting, 
-                        including response protocols, evacuation maps, communication trees, equipment checklists, 
-                        and risk assessments. Capture structured elements such as drill frequencies, emergency 
-                        contacts, continuity planning KPIs, and alignment with ISO/OSHA standards or local disaster 
-                        regulations. If diagrams, dashboards, or flowcharts are present, interpret and summarize key 
-                        resilience measures, response times, and gaps in business continuity planning. Highlight risks 
-                        to operational continuity, employee safety, and regulatory compliance relevant to audit and 
-                        due diligence. If no text exists, describe the layout, document type, use of icons/symbols, 
-                        and overall preparedness maturity of the SME. Explicitly flag any unclear or illegible text 
-                        or numbers as '[illegible text]' and omit them silently. Do not invent or 
-                        assume details that are not explicitly visible in the document. If specific information is 
+                        Extract all visible text from the emergency preparedness document with exact formatting,
+                        including response protocols, evacuation maps, communication trees, equipment checklists,
+                        and risk assessments. Capture structured elements such as drill frequencies, emergency
+                        contacts, continuity planning KPIs, and alignment with ISO/OSHA standards or local disaster
+                        regulations. If diagrams, dashboards, or flowcharts are present, interpret and summarize key
+                        resilience measures, response times, and gaps in business continuity planning. Highlight risks
+                        to operational continuity, employee safety, and regulatory compliance relevant to audit and
+                        due diligence. If no text exists, describe the layout, document type, use of icons/symbols,
+                        and overall preparedness maturity of the SME. Explicitly flag any unclear or illegible text
+                        or numbers as '[illegible text]' and omit them silently. Do not invent or
+                        assume details that are not explicitly visible in the document. If specific information is
                         missing, omit them silently as well.
 
                         After all this, pls only display this:
@@ -362,7 +374,7 @@ elif st.session_state.sme_step == 3:
                         ep_score = generate_summary(prompt)
 
                     st.session_state.sme_data.update({
-                        "pct_emp_health":pct_emp_health,
+                        "pct_emp_health": pct_emp_health,
                         "pct_emp_sss": pct_emp_sss,
                         "emp_turnover_rate": emp_turnover_rate,
                         "payroll": payroll,
@@ -373,13 +385,14 @@ elif st.session_state.sme_step == 3:
                         "emergency_score": ep_score
                     })
                     st.session_state.sme_step = 4
+                    st.rerun()
 
 elif st.session_state.sme_step == 4:
     with st.form("form4"):
         fin_reporting_freq = st.selectbox("Enter frequency of financial reporting",
-                                              ["Daily","Monthly","Quarterly","Yearly","Never"])
+                                          ["Daily", "Monthly", "Quarterly", "Yearly", "Never"])
         bir_income_tax = st.file_uploader("Upload Latest BIR Income tax here (Required)", type="PDF", accept_multiple_files=False)
-        documented_policies = st.file_uploader("Upload business policy here", type=["PDF","JPG","PNG"], accept_multiple_files=False)
+        documented_policies = st.file_uploader("Upload business policy here", type=["PDF", "JPG", "PNG"], accept_multiple_files=False)
         has_documented_policies = bool(documented_policies)
         inspection_result = st.number_input("Enter BPI inspection result score",
             min_value=0.0, max_value=100.0)
@@ -394,23 +407,23 @@ elif st.session_state.sme_step == 4:
                     "bir_income_tax": bir_income_tax,
                     "documented_policies": documented_policies,
                     "has_policies": has_documented_policies,
-                    "inspection_result":inspection_result
+                    "inspection_result": inspection_result
                 })
                 sme_id = temp_insert_sme(st.session_state.sme_data)
 
             business_permit_file = save_to_uploads(st.session_state.sme_data.get("business_permit"), sme_id)
-            audited_fs_file = save_to_uploads(st.session_state.sme_data.get("audited_financial_statement"), sme_id) 
-            bcp_file = save_to_uploads(st.session_state.sme_data.get("bcp"), sme_id) 
+            audited_fs_file = save_to_uploads(st.session_state.sme_data.get("audited_financial_statement"), sme_id)
+            bcp_file = save_to_uploads(st.session_state.sme_data.get("bcp"), sme_id)
             utility_bill_file = save_to_uploads(st.session_state.sme_data.get("utility_bill"), sme_id)
-            permit_file = save_to_uploads(st.session_state.sme_data.get("permit"), sme_id) 
-            payroll_file = save_to_uploads(st.session_state.sme_data.get("payroll"), sme_id) 
-            workplace_safety_file = save_to_uploads(st.session_state.sme_data.get("workplace_safety"), sme_id) 
-            emergency_preparedness_file = save_to_uploads(st.session_state.sme_data.get("emergency_preparedness"), sme_id) 
+            permit_file = save_to_uploads(st.session_state.sme_data.get("permit"), sme_id)
+            payroll_file = save_to_uploads(st.session_state.sme_data.get("payroll"), sme_id)
+            workplace_safety_file = save_to_uploads(st.session_state.sme_data.get("workplace_safety"), sme_id)
+            emergency_preparedness_file = save_to_uploads(st.session_state.sme_data.get("emergency_preparedness"), sme_id)
             bir_income_tax_file = save_to_uploads(st.session_state.sme_data.get("bir_income_tax"), sme_id)
-            documented_policies_file = save_to_uploads(st.session_state.sme_data.get("documented_policies"), sme_id) 
-            
-            update_sme_files(sme_id, business_permit_file, payroll_file, bir_income_tax_file) 
-            
+            documented_policies_file = save_to_uploads(st.session_state.sme_data.get("documented_policies"), sme_id)
+
+            update_sme_files(sme_id, business_permit_file, payroll_file, bir_income_tax_file)
+
             st.success("Submission successful! Redirecting to Home in 3 seconds...")
             st.markdown("""
                 <meta http-equiv="refresh" content="3;url=/">
